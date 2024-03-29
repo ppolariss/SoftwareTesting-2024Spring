@@ -9,6 +9,7 @@ import com.demo.controller.user.OrderController;
 import com.demo.entity.Order;
 import com.demo.entity.User;
 import com.demo.entity.Venue;
+import com.demo.entity.vo.OrderVo;
 import com.demo.exception.LoginException;
 import com.demo.service.OrderService;
 import com.demo.service.OrderVoService;
@@ -94,7 +95,7 @@ public class OrderControllerTests {
     }
 
     @Test
-    public void testOrderPlace() throws  Exception{
+    public void testOrderPlace() throws  Exception {
         // choose id
         int normalVId = 1;
         int emptyVId = 2;
@@ -129,5 +130,53 @@ public class OrderControllerTests {
         //test order_place no param
         mockMvc.perform(get("/order_place"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    public void testGetOrderListWithoutLogin() throws Exception {
+        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/getOrderList.do")));
+        assertTrue(exception.getRootCause() instanceof LoginException);
+    }
+
+    @Test
+    public void testGetOrderListWithErrorPageMin() throws Exception {
+        // 没有做-1输入的处理
+        mockMvc.perform(get("/getOrderList.do").param("page", "-1").sessionAttr("user", new User()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testGetOrderListWithErrorPageMax() throws Exception {
+        // 没有做page越界处理
+        User user = new User();
+        user.setUserID("19");
+        mockMvc.perform(get("/getOrderList.do").param("page","5").sessionAttr("user",user))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+    @Test
+    public void testGetOrderListWithRightPage() throws Exception{
+        // mock orders
+        List<Order> mockOrderList = new ArrayList<>();
+        mockOrderList.add(new Order());
+        Page<Order> page = new PageImpl<>(mockOrderList);
+
+        // mock page
+        Page<Order> pageOfManyOrders = new PageImpl<>(mockOrderList);
+
+        //mock service
+        int pageNormal = 0;
+        Pageable orderPageableNormal = PageRequest.of(pageNormal,5, Sort.by("orderTime").descending());
+        when(orderService.findUserOrder("1", orderPageableNormal)).thenReturn(pageOfManyOrders);
+
+        // test
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(get("/getOrderList.do").sessionAttr("user",user))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json"))
+                .andExpect(jsonPath("$").isArray());
     }
 }
