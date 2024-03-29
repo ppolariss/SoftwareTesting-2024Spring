@@ -3,6 +3,7 @@ package com.demo.order;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.demo.controller.user.OrderController;
@@ -140,14 +141,16 @@ public class OrderControllerTests {
 
     @Test
     public void testGetOrderListWithErrorPageMin() throws Exception {
-        // 没有做-1输入的处理
+        // bug here
+        // 没有做-1输入的处理，导致PageRequest.of()失败
         mockMvc.perform(get("/getOrderList.do").param("page", "-1").sessionAttr("user", new User()))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     public void testGetOrderListWithErrorPageMax() throws Exception {
-        // 没有做page越界处理
+        // bug here
+        // 没有做page越界处理，导致null对象调用
         User user = new User();
         user.setUserID("19");
         mockMvc.perform(get("/getOrderList.do").param("page","5").sessionAttr("user",user))
@@ -156,8 +159,9 @@ public class OrderControllerTests {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
     }
+
     @Test
-    public void testGetOrderListWithRightPage() throws Exception{
+    public void testGetOrderListWithValidtPage() throws Exception{
         // mock orders
         List<Order> mockOrderList = new ArrayList<>();
         mockOrderList.add(new Order());
@@ -178,5 +182,42 @@ public class OrderControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
                 .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    public void testAddOrderWithoutLogin() throws Exception {
+        //代码 date有问题！！
+        mockMvc.perform(post("/addOrder.do")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "2"))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertTrue(result.getResolvedException() instanceof NestedServletException))
+                .andExpect(result -> assertTrue(result.getResolvedException().getCause() instanceof LoginException))
+                .andExpect(result -> assertEquals("请登录！", result.getResolvedException().getCause().getMessage()));
+    }
+
+    @Test
+    public void testFinishOrderWithValidID() throws Exception {
+        int orderID = 1;
+        doNothing().when(orderService).finishOrder(orderID);
+        mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isOk());
+        verify(orderService).finishOrder(orderID);
+    }
+
+    @Test
+    public void testFinishOrderWithInvalidOrderID() throws Exception {
+        int orderID = -1;
+        doNothing().when(orderService).finishOrder(orderID);
+        mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isOk());
+        verify(orderService).finishOrder(orderID);
+    }
+
+    @Test
+    public void testModifyOrderWith() throws Exception {
+
     }
 }
