@@ -15,6 +15,7 @@ import com.demo.exception.LoginException;
 import com.demo.service.OrderService;
 import com.demo.service.OrderVoService;
 import com.demo.service.VenueService;
+import org.aspectj.weaver.ast.Or;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -221,7 +222,33 @@ public class OrderControllerTests {
     }
 
     @Test
-    public void testModifyOrderWith() throws Exception {
+    public void testModifyOrderWithValidID() throws Exception {
+        int validId = 1;
+        // mock orders
+        Order mockOrder = new Order();
+        mockOrder.setOrderID(validId);
+        mockOrder.setVenueID(1);
+        Venue mockVenue = new Venue();
+        mockVenue.setVenueID(1);
 
+        //mock service
+        when(orderService.findById(validId)).thenReturn(mockOrder);
+        when(venueService.findByVenueID(mockOrder.getVenueID())).thenReturn(mockVenue);
+
+        // test
+        mockMvc.perform(get("/modifyOrder.do").param("orderID",String.valueOf(validId)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("order_edit"))
+                .andExpect(model().attribute("order",mockOrder))
+                .andExpect(model().attribute("venue",mockVenue));
+    }
+
+    @Test
+    public void testModifyOrderWithInvalidID() throws Exception {
+        // bug here
+        // 程序中没有处理非法order id情况，可能导致null调用后续的函数
+        when(orderService.findById(-1)).thenReturn(null);
+        mockMvc.perform(get("/modifyOrder.do").param("orderID","-1"))
+                .andExpect(status().isNotFound());
     }
 }
