@@ -186,6 +186,7 @@ public class OrderControllerTests {
                 .andExpect(jsonPath("$").isArray());
     }
 
+    //TODO：date有问题导致其他代码没法跑，所以相关测试都没写
     @Test
     public void testAddOrderWithoutLogin() throws Exception {
         //代码 date有问题！！
@@ -211,6 +212,7 @@ public class OrderControllerTests {
 
     @Test
     public void testFinishOrderWithInvalidOrderID() throws Exception {
+        //TODO: 这里有问题！！ 应该抛出异常的！！
         int orderID = -1;
         doNothing().when(orderService).finishOrder(orderID);
         mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID)))
@@ -248,4 +250,6 @@ public class OrderControllerTests {
         mockMvc.perform(get("/modifyOrder.do").param("orderID","-1"))
                 .andExpect(status().isNotFound());
     }
+
+
 }
