@@ -153,6 +153,10 @@ public class OrderControllerTests {
         // 没有做page越界处理，导致null对象调用
         User user = new User();
         user.setUserID("19");
+
+        Pageable order_pageable = PageRequest.of(5-1,5, Sort.by("orderTime").descending());
+        when(orderService.findUserOrder(user.getUserID(), order_pageable)).thenReturn(null);
+
         mockMvc.perform(get("/getOrderList.do").param("page","5").sessionAttr("user",user))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
