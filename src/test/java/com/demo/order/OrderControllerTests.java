@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.demo.controller.user.OrderController;
 import com.demo.entity.Order;
 import com.demo.entity.User;
+import com.demo.entity.Venue;
 import com.demo.exception.LoginException;
 import com.demo.service.OrderService;
 import com.demo.service.OrderVoService;
@@ -90,5 +91,43 @@ public class OrderControllerTests {
         NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/order_manage")));
         assertTrue(exception.getRootCause() instanceof LoginException);
 
+    }
+
+    @Test
+    public void testOrderPlace() throws  Exception{
+        // choose id
+        int normalVId = 1;
+        int emptyVId = 2;
+
+        // mock service
+        Venue mockVenue = new Venue(1,"name","description"
+        ,200,"","address","09:00","20:00");
+        Venue mockEmpty = new Venue();
+        when(venueService.findByVenueID(normalVId)).thenReturn(mockVenue);
+        when(venueService.findByVenueID(emptyVId)).thenReturn(mockEmpty);
+
+        // test normal id
+        mockMvc.perform(get("/order_place.do").param("venueID",String.valueOf(normalVId)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("order_place"))
+                .andExpect(model().attribute("venue",mockVenue));
+
+        // test error id
+        mockMvc.perform(get("/order_place.do").param("venueID",String.valueOf(emptyVId)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("order_place"))
+                .andExpect(model().attribute("venue",mockEmpty));
+
+        // test error param
+        mockMvc.perform(get("/order_place.do").param("venueID","nct127"))
+                .andExpect(status().isBadRequest());
+
+        // test empty param
+        mockMvc.perform(get("/order_place.do").param("venueID",""))
+                .andExpect(status().isBadRequest());
+
+        //test order_place no param
+        mockMvc.perform(get("/order_place"))
+                .andExpect(status().isOk());
     }
 }
