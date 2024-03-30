@@ -303,9 +303,10 @@ public class OrderControllerTests {
         // bug here
         // 错误的id，没有阻拦调用service
         int orderID = -1;
+        doNothing().when(orderDao).deleteById(orderID);
         mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
                 .andExpect(status().isOk());
-        verify(orderService, never()).delOrder(orderID);
+        verify(orderDao, never()).deleteById(orderID);
     }
 
     @Test
@@ -336,22 +337,42 @@ public class OrderControllerTests {
 
         mockMvc.perform(get("/order/getOrderList.do").param("venueName","nct127").param("date","2023-03-31"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("{\"venue\":{\"venueID\":1,\"venueName\":null,\"description\":null,\"price\":0,\"picture\":null,\"address\":null,\"open_time\":null,\"close_time\":null},\"orders\":[]}"));
+                .andExpect(jsonPath("$.venue").value(mockVenue))
+                .andExpect(jsonPath("$.orders").value(mockOrders));
     }
 
     @Test
     public void testOrderGetOrderListWithInvalidDate() throws Exception {
         // bug here
         // 没有检测date格式
+        String venueName = "nct127";
 
         // mock venue
-        String venueName = "nct127";
         Venue mockVenue = new Venue();
         mockVenue.setVenueID(1);
         when(venueService.findByVenueName(venueName)).thenReturn(mockVenue);
 
         mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","11:11"))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.venue").doesNotExist())
+                .andExpect(jsonPath("$.orders").doesNotExist());
+    }
+
+    @Test
+    public void testOrderGetOrderListWithWrongValueDate() throws Exception {
+        // bug here
+        // 没有检测date格式
+        String venueName = "nct127";
+
+        // mock venue
+        Venue mockVenue = new Venue();
+        mockVenue.setVenueID(1);
+        when(venueService.findByVenueName(venueName)).thenReturn(mockVenue);
+
+        mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","2023-22-22"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.venue").doesNotExist())
+                .andExpect(jsonPath("$.orders").doesNotExist());
     }
 
     @Test
@@ -363,6 +384,7 @@ public class OrderControllerTests {
 
         mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","2023-01-27"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("{}"));
+                .andExpect(jsonPath("$.venue").doesNotExist())
+                .andExpect(jsonPath("$.orders").doesNotExist());
     }
 }
