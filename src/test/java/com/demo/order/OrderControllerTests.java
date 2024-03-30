@@ -11,11 +11,13 @@ import com.demo.entity.Order;
 import com.demo.entity.User;
 import com.demo.entity.Venue;
 import com.demo.entity.vo.OrderVo;
+import com.demo.entity.vo.VenueOrder;
 import com.demo.exception.LoginException;
 import com.demo.service.OrderService;
 import com.demo.service.OrderVoService;
 import com.demo.service.VenueService;
 import org.aspectj.weaver.ast.Or;
+import org.hibernate.jdbc.Expectation;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -25,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.NestedServletException;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -278,10 +281,60 @@ public class OrderControllerTests {
     }
 
     @Test
-    public  void testDelOrderWithStringID() throws Exception {
+    public void testDelOrderWithStringID() throws Exception {
         mockMvc.perform(post("/delOrder.do").param("orderID", "nct127"))
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    public void testOrderGetOrderListWithValidParam() throws Exception {
+        // mock venue
+        String venueName = "nct127";
+        Venue mockVenue = new Venue();
+        mockVenue.setVenueID(1);
+        when(venueService.findByVenueName(venueName)).thenReturn(mockVenue);
 
+        // mock date
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime ldt1 = LocalDateTime.parse("2023-03-31 00:00:00",df);
+        LocalDateTime ldt2 = LocalDateTime.parse("2023-04-01 00:00:00",df);
+
+        //mock venueOrder
+        VenueOrder mockVenueOrder = new VenueOrder();
+        mockVenueOrder.setVenue(mockVenue);
+        List<Order> mockOrders = new ArrayList<>();
+        when(orderService.findDateOrder(1,ldt1,ldt2)).thenReturn(mockOrders);
+        mockVenueOrder.setOrders(mockOrders);
+
+        mockMvc.perform(get("/order/getOrderList.do").param("venueName","nct127").param("date","2023-03-31"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"venue\":{\"venueID\":1,\"venueName\":null,\"description\":null,\"price\":0,\"picture\":null,\"address\":null,\"open_time\":null,\"close_time\":null},\"orders\":[]}"));
+    }
+
+    @Test
+    public void testOrderGetOrderListWithInvalidDate() throws Exception {
+        // bug here
+        // 没有检测date格式
+
+        // mock venue
+        String venueName = "nct127";
+        Venue mockVenue = new Venue();
+        mockVenue.setVenueID(1);
+        when(venueService.findByVenueName(venueName)).thenReturn(mockVenue);
+
+        mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","11:11"))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    public void testOrderGetOrderListWithInvalidvenueName() throws Exception {
+        //bug here
+        //没有检测错误venue name
+        String venueName = "nct127-false";
+        when(venueService.findByVenueName(venueName)).thenReturn(null);
+
+        mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","2023-01-27"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{}"));
+    }
 }
