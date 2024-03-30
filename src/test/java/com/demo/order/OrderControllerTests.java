@@ -278,7 +278,9 @@ public class OrderControllerTests {
         // 程序中没有处理非法order id情况，可能导致null调用后续的函数
         when(orderService.findById(-1)).thenReturn(null);
         mockMvc.perform(get("/modifyOrder.do").param("orderID","-1"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("order"))
+                .andExpect(model().attributeDoesNotExist("venue"));
     }
 
     @Test
