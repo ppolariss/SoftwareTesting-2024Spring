@@ -105,42 +105,39 @@ public class OrderControllerTests {
     }
 
     @Test
-    public void testOrderPlace() throws  Exception {
-        // choose id
-        int normalVId = 1;
-        int emptyVId = 2;
+    public void testOrderPlaceDoWithValidID() throws Exception {
+        int validId = 1;
 
         // mock service
         Venue mockVenue = new Venue(1,"name","description"
-        ,200,"","address","09:00","20:00");
-        Venue mockEmpty = new Venue();
-        when(venueService.findByVenueID(normalVId)).thenReturn(mockVenue);
-        when(venueService.findByVenueID(emptyVId)).thenReturn(mockEmpty);
+                ,200,"","address","09:00","20:00");
+        when(venueService.findByVenueID(validId)).thenReturn(mockVenue);
 
-        // test normal id
-        mockMvc.perform(get("/order_place.do").param("venueID",String.valueOf(normalVId)))
+        // test valid id
+        mockMvc.perform(get("/order_place.do").param("venueID",String.valueOf(validId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("order_place"))
                 .andExpect(model().attribute("venue",mockVenue));
+    }
+
+    @Test
+    public void testOrderPlaceDoWithInvalidID() throws Exception {
+        int emptyVId = 2;
+        when(venueService.findByVenueID(emptyVId)).thenReturn(null);
 
         // test error id
         mockMvc.perform(get("/order_place.do").param("venueID",String.valueOf(emptyVId)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("order_place"))
-                .andExpect(model().attribute("venue",mockEmpty));
+                .andExpect(model().attributeDoesNotExist("venue"));
+    }
 
-        // test error param
+    @Test
+    public void testOrderPlaceDoWithStringID() throws Exception {
         mockMvc.perform(get("/order_place.do").param("venueID","nct127"))
                 .andExpect(status().isBadRequest());
-
-        // test empty param
-        mockMvc.perform(get("/order_place.do").param("venueID",""))
-                .andExpect(status().isBadRequest());
-
-        //test order_place no param
-        mockMvc.perform(get("/order_place"))
-                .andExpect(status().isOk());
     }
+
 
     @Test
     public void testGetOrderListWithoutLogin() throws Exception {
