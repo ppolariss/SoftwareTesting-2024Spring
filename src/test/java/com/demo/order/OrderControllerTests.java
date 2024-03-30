@@ -44,6 +44,7 @@ public class OrderControllerTests {
     @MockBean
     private VenueService venueService; // 使用 @MockBean 注解模拟 OrderVoService 类
 
+
     @Test
     public void testOrderManage() throws Exception {
         //mock two types of user
@@ -249,6 +250,31 @@ public class OrderControllerTests {
         when(orderService.findById(-1)).thenReturn(null);
         mockMvc.perform(get("/modifyOrder.do").param("orderID","-1"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public  void testDelOrderWithValidID() throws Exception {
+        int orderID = 1;
+        doNothing().when(orderService).delOrder(orderID);
+        mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isOk());
+        verify(orderService).delOrder(orderID);
+    }
+
+    @Test
+    public  void testDelOrderWithInvalidID() throws Exception {
+        // bug here
+        // 错误的id，没有阻拦调用service
+        int orderID = -1;
+        mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isOk());
+        verify(orderService, never()).delOrder(orderID);
+    }
+
+    @Test
+    public  void testDelOrderWithStringID() throws Exception {
+        mockMvc.perform(post("/delOrder.do").param("orderID", "nct127"))
+                .andExpect(status().isBadRequest());
     }
 
 
