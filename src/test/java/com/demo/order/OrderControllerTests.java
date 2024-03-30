@@ -138,7 +138,11 @@ public class OrderControllerTests {
                 .andExpect(status().isBadRequest());
     }
 
-
+    @Test
+    public void testOrderPlace() throws Exception {
+        mockMvc.perform(get("/order_place"))
+                .andExpect(status().isOk());
+    }
     @Test
     public void testGetOrderListWithoutLogin() throws Exception {
         NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/getOrderList.do")));
