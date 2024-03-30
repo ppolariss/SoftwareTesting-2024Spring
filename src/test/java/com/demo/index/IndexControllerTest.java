@@ -1,5 +1,7 @@
 package com.demo.index;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -43,14 +45,28 @@ public class IndexControllerTest {
     private MessageService messageService;
 
     @Test
-    public void testIndex() throws Exception {
+    public void testNull() {
+        Pageable venue_pageable= PageRequest.of(999999999,5, Sort.by("venueID").ascending());
+        Pageable news_pageable= PageRequest.of(999999999,5, Sort.by("time").descending());
+        Pageable message_pageable= PageRequest.of(999999999,5, Sort.by("time").descending());
+
+        Page<Venue> temp1 = venueService.findAll(venue_pageable);
+        assertNull(temp1);
+        Page<News> temp2 = newsService.findAll(news_pageable);
+        assertNull(temp2);
+        Page<Message> temp3 = messageService.findPassState(message_pageable);
+        assertNull(temp3);
+    }
+
+    @Test
+    public void testIndexWithEmptyData() throws Exception {
         List<News> newsList = new ArrayList<>();
         List<Venue> venueList = new ArrayList<>();
         List<MessageVo> messageVoList = new ArrayList<>();
         List<Message> messageList = new ArrayList<>();
         Page<Message> messagePage = new PageImpl<>(messageList);
 
-        // empty info
+        // empty data
         when(newsService.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(newsList));
         when(venueService.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(venueList));
         when(messageService.findPassState(any(Pageable.class))).thenReturn(messagePage);
@@ -63,8 +79,17 @@ public class IndexControllerTest {
                 .andExpect(model().attribute("news_list", newsList))
                 .andExpect(model().attribute("venue_list", venueList))
                 .andExpect(model().attribute("message_list", messageVoList));
+    }
 
-        // not empty info
+    @Test
+    public void testIndexWithNotEmptyData() throws Exception {
+        List<News> newsList = new ArrayList<>();
+        List<Venue> venueList = new ArrayList<>();
+        List<MessageVo> messageVoList = new ArrayList<>();
+        List<Message> messageList = new ArrayList<>();
+        Page<Message> messagePage;
+
+        // not empty data
         newsList.add(new News(1, "title", "content", LocalDateTime.now()));
         newsList.add(new News(2, "title", "content", LocalDateTime.now()));
         venueList.add(new Venue(1, "venue_name", "description", 1, "picture", "address", "open_time", "close_time"));
@@ -84,17 +109,21 @@ public class IndexControllerTest {
                 .andExpect(model().attribute("news_list", newsList))
                 .andExpect(model().attribute("venue_list", venueList))
                 .andExpect(model().attribute("message_list", messageVoList));
+    }
 
-        // null info
+    @Test
+    public void testIndexWithNullData() throws Exception {
+
+        // null data
         // bug here
         // null check should be added
-//        when(newsService.findAll(any(Pageable.class))).thenReturn(null);
-//        when(venueService.findAll(any(Pageable.class))).thenReturn(null);
-//        when(messageService.findPassState(any(Pageable.class))).thenReturn(null);
-//        when(messageVoService.returnVo(anyList())).thenReturn(null);
-//
-//        mockMvc.perform(get("/index"))
-//                .andExpect(status().isNotFound());
+        when(newsService.findAll(any(Pageable.class))).thenReturn(null);
+        when(venueService.findAll(any(Pageable.class))).thenReturn(null);
+        when(messageService.findPassState(any(Pageable.class))).thenReturn(null);
+        when(messageVoService.returnVo(anyList())).thenReturn(null);
+
+        mockMvc.perform(get("/index"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
