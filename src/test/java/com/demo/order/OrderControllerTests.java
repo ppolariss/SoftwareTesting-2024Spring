@@ -253,7 +253,13 @@ public class OrderControllerTests {
     }
 
     @Test
-    public  void testDelOrderWithValidID() throws Exception {
+    public void testModifyOrderWithStringID() throws Exception {
+        mockMvc.perform(get("/modifyOrder.do").param("orderID", "nct127"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testDelOrderWithValidID() throws Exception {
         int orderID = 1;
         doNothing().when(orderService).delOrder(orderID);
         mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
@@ -262,7 +268,7 @@ public class OrderControllerTests {
     }
 
     @Test
-    public  void testDelOrderWithInvalidID() throws Exception {
+    public void testDelOrderWithInvalidID() throws Exception {
         // bug here
         // 错误的id，没有阻拦调用service
         int orderID = -1;
