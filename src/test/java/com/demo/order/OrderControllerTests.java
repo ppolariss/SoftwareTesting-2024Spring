@@ -47,14 +47,11 @@ public class OrderControllerTests {
     @MockBean
     private VenueService venueService; // 使用 @MockBean 注解模拟 OrderVoService 类
 
-
     @Test
-    public void testOrderManage() throws Exception {
-        //mock two types of user
+    public void testOrderManageWithUserHaveManyOrders() throws Exception {
         int userManyOrders = 27;
-        int userNoOrders = 19;
 
-        //mock 27's orders
+        //mock orders
         Order mockOrder1 = new Order(29, "yonghu", 16, 2,
                 LocalDateTime.of(2020, 1, 2, 18, 16, 8),
                 LocalDateTime.of(2020, 1, 24, 11, 0, 0), 3, 1500);
@@ -65,17 +62,12 @@ public class OrderControllerTests {
         mockOrderList.add(mockOrder1);
         mockOrderList.add(mockOrder2);
 
-        //mock 19's orders
-        List<Order> mockEmpty =  new ArrayList<>();
-
         // mock page
         Page<Order> pageOfManyOrders = new PageImpl<>(mockOrderList);
-        Page<Order> pageOfEmptyOrders = new PageImpl<>(mockEmpty);
 
         //mock service
         Pageable order_pageable = PageRequest.of(0,5, Sort.by("orderTime").descending());
         when(orderService.findUserOrder(String.valueOf(userManyOrders), order_pageable)).thenReturn(pageOfManyOrders);
-        when(orderService.findUserOrder(String.valueOf(userNoOrders),order_pageable)).thenReturn(pageOfEmptyOrders);
 
         // test user have many orders
         User user = new User();
@@ -84,20 +76,32 @@ public class OrderControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(view().name("order_manage"))
                 .andExpect(model().attribute("total", pageOfManyOrders.getTotalPages()));
+    }
+
+    @Test
+    public void testOrderManageWithUserHaveNoOrders() throws Exception {
+        int userNoOrders = 19;
+
+        Pageable order_pageable = PageRequest.of(0,5, Sort.by("orderTime").descending());
+        when(orderService.findUserOrder(String.valueOf(userNoOrders),order_pageable)).thenReturn(null);
+
+        //mock 19's orders and expected page
+        List<Order> mockEmpty =  new ArrayList<>();
+        Page<Order> pageOfEmptyOrders = new PageImpl<>(mockEmpty);
 
         // test user have no orders
-        user.setUserID("19");
+        User user = new User();
+        user.setUserID(String.valueOf(userNoOrders));
         mockMvc.perform(get("/order_manage").sessionAttr("user",user))
                 .andExpect(status().isOk())
                 .andExpect(view().name("order_manage"))
                 .andExpect(model().attribute("total", pageOfEmptyOrders.getTotalPages()));
+    }
 
-        // no test for error userid -- this method based on login
-
-        // test no login
+    @Test
+    public void testOrderManageWithoutLogin() throws Exception {
         NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/order_manage")));
         assertTrue(exception.getRootCause() instanceof LoginException);
-
     }
 
     @Test
