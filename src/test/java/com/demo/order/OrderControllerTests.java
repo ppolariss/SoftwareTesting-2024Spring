@@ -155,6 +155,7 @@ public class OrderControllerTests {
         // mock orders
         List<Order> mockOrderList = new ArrayList<>();
         mockOrderList.add(new Order());
+        List<OrderVo> mockVo = new ArrayList<>();
 
         // mock page
         Page<Order> pageOfManyOrders = new PageImpl<>(mockOrderList);
@@ -163,6 +164,7 @@ public class OrderControllerTests {
         int pageNormal = 0;
         Pageable orderPageableNormal = PageRequest.of(pageNormal,5, Sort.by("orderTime").descending());
         when(orderService.findUserOrder("1", orderPageableNormal)).thenReturn(pageOfManyOrders);
+        when(orderVoService.returnVo(pageOfManyOrders.getContent())).thenReturn(mockVo);
 
         // test
         User user = new User();
@@ -170,7 +172,8 @@ public class OrderControllerTests {
         mockMvc.perform(get("/getOrderList.do").sessionAttr("user",user))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").value(mockVo));
     }
 
     @Test
