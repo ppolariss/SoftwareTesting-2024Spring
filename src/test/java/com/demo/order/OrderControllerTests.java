@@ -179,7 +179,7 @@ public class OrderControllerTests {
         // 没有做-1输入的处理，导致PageRequest.of()失败
         mockMvc.perform(get("/getOrderList.do").param("page", "-1").sessionAttr("user", new User()))
                 .andExpect(status().isOk())
-                .andExpect(content().json("{}"));;
+                .andExpect(jsonPath("$").doesNotExist());
     }
 
     @Test
@@ -194,7 +194,7 @@ public class OrderControllerTests {
 
         mockMvc.perform(get("/getOrderList.do").param("page","5").sessionAttr("user",user))
                 .andExpect(status().isOk())
-                .andExpect(content().json("{}"));
+                .andExpect(jsonPath("$").doesNotExist());
     }
 
     @Test
