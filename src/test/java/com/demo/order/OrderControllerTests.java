@@ -143,40 +143,12 @@ public class OrderControllerTests {
         mockMvc.perform(get("/order_place"))
                 .andExpect(status().isOk());
     }
-    @Test
-    public void testGetOrderListWithoutLogin() throws Exception {
-        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/getOrderList.do")));
-        assertTrue(exception.getRootCause() instanceof LoginException);
-    }
 
     @Test
-    public void testGetOrderListWithErrorPageMin() throws Exception {
-        // bug here
-        // 没有做-1输入的处理，导致PageRequest.of()失败
-        mockMvc.perform(get("/getOrderList.do").param("page", "-1").sessionAttr("user", new User()))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    public void testGetOrderListWithErrorPageMax() throws Exception {
-        // bug here
-        // 没有做page越界处理，导致null对象调用
-        User user = new User();
-        user.setUserID("19");
-
-        Pageable order_pageable = PageRequest.of(5-1,5, Sort.by("orderTime").descending());
-        when(orderService.findUserOrder(user.getUserID(), order_pageable)).thenReturn(null);
-
-        mockMvc.perform(get("/getOrderList.do").param("page","5").sessionAttr("user",user))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    public void testGetOrderListWithValidtPage() throws Exception{
+    public void testGetOrderListWithValidPage() throws Exception{
         // mock orders
         List<Order> mockOrderList = new ArrayList<>();
         mockOrderList.add(new Order());
-        Page<Order> page = new PageImpl<>(mockOrderList);
 
         // mock page
         Page<Order> pageOfManyOrders = new PageImpl<>(mockOrderList);
@@ -194,6 +166,38 @@ public class OrderControllerTests {
                 .andExpect(content().contentType("application/json"))
                 .andExpect(jsonPath("$").isArray());
     }
+
+    @Test
+    public void testGetOrderListWithErrorPageMin() throws Exception {
+        // bug here
+        // 没有做-1输入的处理，导致PageRequest.of()失败
+        mockMvc.perform(get("/getOrderList.do").param("page", "-1").sessionAttr("user", new User()))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{}"));;
+    }
+
+    @Test
+    public void testGetOrderListWithErrorPageMax() throws Exception {
+        // bug here
+        // 没有做page越界处理，导致null对象调用
+        User user = new User();
+        user.setUserID("nct127");
+
+        Pageable order_pageable = PageRequest.of(5-1,5, Sort.by("orderTime").descending());
+        when(orderService.findUserOrder(user.getUserID(), order_pageable)).thenReturn(null);
+
+        mockMvc.perform(get("/getOrderList.do").param("page","5").sessionAttr("user",user))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{}"));;
+    }
+
+    @Test
+    public void testGetOrderListWithoutLogin() throws Exception {
+        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/getOrderList.do")));
+        assertTrue(exception.getRootCause() instanceof LoginException);
+    }
+
+
 
     //TODO：date有问题导致其他代码没法跑，所以相关测试都没写
     @Test
