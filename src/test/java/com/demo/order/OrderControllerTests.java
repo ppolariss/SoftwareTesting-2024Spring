@@ -198,6 +198,14 @@ public class OrderControllerTests {
     }
 
     @Test
+    public void testGetOrderListWithStringPage() throws Exception {
+        User user = new User();
+        user.setUserID("nct127");
+        mockMvc.perform(get("/getOrderList.do").param("page","jw").sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     public void testGetOrderListWithoutLogin() throws Exception {
         NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/getOrderList.do")));
         assertTrue(exception.getRootCause() instanceof LoginException);
