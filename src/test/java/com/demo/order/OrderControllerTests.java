@@ -1,5 +1,6 @@
 package com.demo.order;
 
+import static com.demo.service.OrderService.STATE_FINISH;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -7,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.demo.controller.user.OrderController;
+import com.demo.dao.OrderDao;
 import com.demo.entity.Order;
 import com.demo.entity.User;
 import com.demo.entity.Venue;
@@ -19,6 +21,7 @@ import com.demo.service.VenueService;
 import org.aspectj.weaver.ast.Or;
 import org.hibernate.jdbc.Expectation;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -46,6 +49,9 @@ public class OrderControllerTests {
 
     @MockBean
     private VenueService venueService; // 使用 @MockBean 注解模拟 OrderVoService 类
+
+    @MockBean
+    private OrderDao orderDao;
 
     @Test
     public void testOrderManageWithUserHaveManyOrders() throws Exception {
@@ -188,7 +194,7 @@ public class OrderControllerTests {
 
         mockMvc.perform(get("/getOrderList.do").param("page","5").sessionAttr("user",user))
                 .andExpect(status().isOk())
-                .andExpect(content().json("{}"));;
+                .andExpect(content().json("{}"));
     }
 
     @Test
@@ -216,21 +222,32 @@ public class OrderControllerTests {
 
     @Test
     public void testFinishOrderWithValidID() throws Exception {
-        int orderID = 1;
-        doNothing().when(orderService).finishOrder(orderID);
+        int orderID = 127;
+        Order mockOrder = new Order();
+        mockOrder.setOrderID(orderID);
+        when(orderDao.findByOrderID(orderID)).thenReturn(mockOrder);
+        doNothing().when(orderDao).updateState(STATE_FINISH,orderID);
+
         mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID)))
                 .andExpect(status().isOk());
-        verify(orderService).finishOrder(orderID);
+        verify(orderService, times(1)).finishOrder(orderID);
+        //verify(orderDao).updateState(STATE_FINISH,mockOrder.getOrderID());
     }
 
     @Test
     public void testFinishOrderWithInvalidOrderID() throws Exception {
-        //TODO: 这里有问题！！ 应该抛出异常的！！
         int orderID = -1;
-        doNothing().when(orderService).finishOrder(orderID);
-        mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID)))
-                .andExpect(status().isOk());
-        verify(orderService).finishOrder(orderID);
+        when(orderDao.findByOrderID(orderID)).thenReturn(null);
+
+        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID))));
+        assertTrue(exception.getRootCause() instanceof  RuntimeException);
+
+    }
+
+    @Test
+    public void testFinishOrderWithStringID() throws Exception {
+        mockMvc.perform(post("/finishOrder.do").param("orderID", "nct127"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
