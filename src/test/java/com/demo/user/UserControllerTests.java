@@ -1,5 +1,6 @@
 package com.demo.user;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.*;
@@ -83,14 +84,14 @@ public class UserControllerTests {
     @Test
     public void testRegisterWithIncompleteUserInfo() throws Exception {
 
-        String userID = "";  // userID cannot be empty
+        String userID = null;  // userID cannot be null
         String userName = "test";
         String password = "password123";
         String email = "test@example.com";
         String phone = "13495684256";
 
-        when(userService.create(any(User.class))).thenReturn(0);
-//        doThrow(new RuntimeException("UserID cannot be empty.")).when(userService).create(any(User.class));
+//        when(userService.create(any(User.class))).thenReturn(0);
+        doThrow(new RuntimeException("UserID cannot be empty.")).when(userService).create(any(User.class));
         // 我们应该如何假设service层出现异常的行为？假定抛出异常还是设置返回值？但是返回值在controller函数中根本不起作用
         // 如果是设定抛出异常的话，这个测试函数会报错（标红报错，不是标黄的未通过）
 
@@ -100,8 +101,8 @@ public class UserControllerTests {
                         .param("password", password)
                         .param("email", email)
                         .param("phone", phone))
-                .andExpect(status().isBadRequest());
-//                .andExpect(content().string(containsString("UserID cannot be empty.")));
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("UserID cannot be empty.")));
 
         verify(userService).create(any(User.class));
     }
@@ -124,7 +125,7 @@ public class UserControllerTests {
                         .param("password", password)
                         .param("email", email)
                         .param("phone", phone))
-                .andExpect(status().is4xxClientError());  // 409 conflict
+                .andExpect(status().isConflict());  // 409 conflict
 //                .andExpect(content().string(containsString("User already exists.")));
 
         verify(userService).create(any(User.class));
@@ -325,6 +326,32 @@ public class UserControllerTests {
     }
 
     @Test
+    public void testUpdateUserWithIncompleteInfo() throws Exception {
+
+        String userID = null; // userID cannot be null
+        String userName = "test";
+        String password = "password123";
+        String email = "test@example.com";
+        String phone = "1234567890";
+        MockMultipartFile picture = new MockMultipartFile("picture", "image.jpg", "image/jpeg", "Some image content here".getBytes());
+
+        when(userService.findByUserID(anyString())).thenReturn(null);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
+                        .file(picture)
+                        .param("userName", userName)
+                        .param("userID", userID)
+                        .param("passwordNew", password)
+                        .param("email", email)
+                        .param("phone", phone)
+                        .session((MockHttpSession) request.getSession())
+                )
+                .andExpect(status().isBadRequest());
+
+        verify(userService).findByUserID(userID);
+    }
+
+    @Test
     public void testUpdateUserWithNotExistingUser() throws Exception {
 
         String userID = "1";
@@ -345,7 +372,7 @@ public class UserControllerTests {
                         .param("phone", phone)
                         .session((MockHttpSession) request.getSession())
                 )
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
 
         verify(userService).findByUserID(userID);
     }
@@ -398,6 +425,7 @@ public class UserControllerTests {
         verify(userService).findByUserID(userID);
     }
 
+    // BUG: 没有检查用户不存在的情况
     @Test
     public void testCheckPasswordWithNotExistingUser() throws Exception {
 
@@ -409,10 +437,9 @@ public class UserControllerTests {
         mockMvc.perform(get("/checkPassword.do")
                         .param("userID", userID)
                         .param("password", password))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
 
         verify(userService).findByUserID(userID);
     }
-
 
 }

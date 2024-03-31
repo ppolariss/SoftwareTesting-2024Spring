@@ -85,7 +85,7 @@ public class AdminUserController {
     @ResponseBody
     public boolean checkUserID(String userID){
         int count=userService.countUserID(userID);
-        return count < 1;
+        return count < 1;  // 表明系统中不存在这个 userID，可以使用
     }
     @PostMapping("/delUser.do")
     @ResponseBody
