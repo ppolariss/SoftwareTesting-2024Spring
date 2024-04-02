@@ -4,6 +4,7 @@ import com.demo.entity.Venue;
 import com.demo.service.VenueService;
 import com.demo.utils.FileUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -27,6 +28,8 @@ public class AdminVenueController {
     @RequestMapping("/venue_manage")
     public String venue_manage(Model model) {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
+//        Page<Venue> vs = venueService.findAll(pageable);
+//        System.out.println(vs);
         model.addAttribute("total", venueService.findAll(pageable).getTotalPages());
         return "admin/venue_manage";
     }
@@ -34,6 +37,7 @@ public class AdminVenueController {
     @RequestMapping("/venue_edit")
     public String editVenue(Model model, int venueID) {
         Venue venue = venueService.findByVenueID(venueID);
+        System.out.println(venue);
         model.addAttribute("venue", venue);
         return "/admin/venue_edit";
     }
