@@ -37,7 +37,7 @@ public class AdminVenueController {
     @RequestMapping("/venue_edit")
     public String editVenue(Model model, int venueID) {
         Venue venue = venueService.findByVenueID(venueID);
-        System.out.println(venue);
+//        System.out.println(venue);
         model.addAttribute("venue", venue);
         return "/admin/venue_edit";
     }
@@ -117,3 +117,11 @@ public class AdminVenueController {
     }
 
 }
+
+
+
+
+
+
+
+

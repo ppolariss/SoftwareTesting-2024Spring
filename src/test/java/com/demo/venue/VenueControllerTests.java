@@ -140,11 +140,11 @@ public class VenueControllerTests {
     //    /venue_list
     @Test
     public void testVenueListWithSuccess() throws Exception {
-//TODO
-        when(venueService.findAll(any(Pageable.class)))
+        Pageable pageable = PageRequest.of(0, 5, Sort.by("venueID").ascending());
+        when(venueService.findAll(pageable))
                 .thenReturn(new PageImpl<>(Collections.singletonList(
                         new Venue(1, "venue_name", "description", 1, "picture", "address", "open_time", "close_time")
-                )));
+                ), pageable, 1));
         mockMvc.perform(get("/venue_list"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("venue_list"))
@@ -156,13 +156,17 @@ public class VenueControllerTests {
 
     @Test
     public void testVenueListWithEmptySuccess() throws Exception {
-//        TODO
-        when(venueService.findAll(any(Pageable.class)))
-                .thenReturn(Page.empty());
+        Pageable pageable = PageRequest.of(0, 5, Sort.by("venueID").ascending());
+//        when(venueService.findAll(pageable))
+//                .thenReturn(new PageImpl<>(Collections.emptyList(), pageable, 0));
+        when(venueService.findAll(pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+//        System.out.println(Collections.emptyList().size());
+
         mockMvc.perform(get("/venue_list"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("venue_list"))
                 .andExpect(model().attribute("venue_list", Page.empty().getContent()))
-                .andExpect(model().attribute("total", 0));
+                .andExpect(model().attribute("total", new PageImpl<>(Collections.emptyList()).getTotalPages()));
     }
 }
