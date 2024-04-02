@@ -54,11 +54,11 @@ public class IndexControllerTest {
 
         // empty data
         when(newsService.findAll(news_pageable))
-                .thenReturn(new PageImpl<>(Collections.emptyList(), news_pageable, 1));
+                .thenReturn(new PageImpl<>(Collections.emptyList(), news_pageable, 0));
         when(venueService.findAll(venue_pageable))
-                .thenReturn(new PageImpl<>(Collections.emptyList(), venue_pageable, 1));
+                .thenReturn(new PageImpl<>(Collections.emptyList(), venue_pageable, 0));
         when(messageService.findPassState(message_pageable))
-                .thenReturn(new PageImpl<>(Collections.emptyList(), message_pageable, 1));
+                .thenReturn(new PageImpl<>(Collections.emptyList(), message_pageable, 0));
         when(messageVoService.returnVo(anyList()))
                 .thenReturn(new ArrayList<>());
 
