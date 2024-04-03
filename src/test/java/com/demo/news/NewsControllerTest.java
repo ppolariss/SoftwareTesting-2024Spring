@@ -15,8 +15,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.*;
 import org.springframework.test.web.servlet.MockMvc;
 
+import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @WebMvcTest(NewsController.class)
@@ -29,28 +31,24 @@ public class NewsControllerTest {
     private NewsService newsService;
 
     @Test
-    public void testNull() {
-        Pageable news_pageable = PageRequest.of(999999999, 10, Sort.by("time").ascending());
-        Page<News> temp1 = newsService.findAll(news_pageable);
-        assertNull(temp1);
-
-        int newsID = -1;
-        News temp2 = newsService.findById(newsID);
-        assertNull(temp2);
-    }
-
-    @Test
     public void testNewsWithEmptyParam() throws Exception {
         // empty param
-        mockMvc.perform(get("/news").param("newsID", ""))
+        mockMvc.perform(get("/news"))
                 .andExpect(status().isBadRequest());
+    }
 
+
+    @Test
+    public void testNewsWithNotIntParam() throws Exception {
+        // not int param
+        mockMvc.perform(get("/news").param("newsID", "hello"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    public void testNewsWithErrorParam() throws Exception {
-        // error param
-        mockMvc.perform(get("/news").param("newsID", "hello"))
+    public void testNewsWithNegativeIntParam() throws Exception {
+        // negative int param
+        mockMvc.perform(get("/news").param("newsID", "-10"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -61,8 +59,9 @@ public class NewsControllerTest {
         News mockNews1 = new News(1, "title", "content", LocalDateTime.now());
 
         when(newsService.findById(1)).thenReturn(mockNews1);
-        when(newsService.findById(2)).thenReturn(null);
+        when(newsService.findById(2)).thenThrow(EntityNotFoundException.class);
 
+        // positive int param
         // news found
         mockMvc.perform(get("/news").param("newsID", String.valueOf(newsIDSuccess)))
                 .andExpect(status().isOk())
@@ -77,11 +76,10 @@ public class NewsControllerTest {
         News mockNews1 = new News(1, "title", "content", LocalDateTime.now());
 
         when(newsService.findById(1)).thenReturn(mockNews1);
-        when(newsService.findById(2)).thenReturn(null);
+        when(newsService.findById(2)).thenThrow(EntityNotFoundException.class);
 
+        // positive int param
         // news not found
-        // bug here
-        // null check should be added
         mockMvc.perform(get("/news").param("newsID", String.valueOf(newsIDFail)))
                 .andExpect(status().isNotFound());
     }
@@ -90,28 +88,35 @@ public class NewsControllerTest {
     public void testNewsListWithEmptyParam() throws Exception {
 
         List<News> newsList = new ArrayList<>();
-        newsList.add(new News(1, "title", "content", LocalDateTime.now()));
-        newsList.add(new News(2, "title", "content", LocalDateTime.now()));
+        LocalDateTime time = LocalDateTime.of(2021, 1, 1, 0, 0);
+        newsList.add(new News(1, "title", "content", time));
 
-        Page<News> mockPage = new PageImpl<>(newsList);
+        Page<News> mockPage = new PageImpl<>(newsList, PageRequest.of(0, 5, Sort.by("time").descending()), 5);
+        Page<News> mockEmptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 5, Sort.by("time").descending()), 0);
 
         when(newsService.findAll(PageRequest.of(0, 5, Sort.by("time").descending()))).thenReturn(mockPage);
-        when(newsService.findAll(PageRequest.of(1, 5, Sort.by("time").descending()))).thenReturn(null);
-
+        when(newsService.findAll(PageRequest.of(1, 5, Sort.by("time").descending()))).thenReturn(mockEmptyPage);
 
         // empty param
-        mockMvc.perform(get("/news/getNewsList").param("page", ""))
+        mockMvc.perform(get("/news/getNewsList"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
+                .andExpect(content().json("{\"content\":[{\"newsID\":1,\"title\":\"title\",\"content\":\"content\",\"time\":\"2021-01-01 00:00:00\"}],\"pageable\":{\"sort\":{\"sorted\":true,\"unsorted\":false,\"empty\":false},\"offset\":0,\"pageNumber\":0,\"pageSize\":5,\"paged\":true,\"unpaged\":false},\"totalPages\":1,\"totalElements\":5,\"last\":true,\"size\":5,\"number\":0,\"numberOfElements\":1,\"first\":true,\"empty\":false}"))
                 .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
-    public void testNewsListWithErrorParam() throws Exception {
-        // error param
+    public void testNewsListWithNotIntParam() throws Exception {
+        // not int param
         mockMvc.perform(get("/news/getNewsList").param("page", "hello"))
                 .andExpect(status().isBadRequest());
+    }
 
+    @Test
+    public void testNewsListWithNegativeIntParam() throws Exception {
+        // negative int param
+        mockMvc.perform(get("/news/getNewsList").param("page", "-10"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -120,18 +125,21 @@ public class NewsControllerTest {
         int pageFail = 2;
 
         List<News> newsList = new ArrayList<>();
-        newsList.add(new News(1, "title", "content", LocalDateTime.now()));
-        newsList.add(new News(2, "title", "content", LocalDateTime.now()));
+        LocalDateTime time = LocalDateTime.of(2021, 1, 1, 0, 0);
+        newsList.add(new News(1, "title", "content", time));
 
-        Page<News> mockPage = new PageImpl<>(newsList);
+        Page<News> mockPage = new PageImpl<>(newsList, PageRequest.of(0, 5, Sort.by("time").descending()), 5);
+        Page<News> mockEmptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 5, Sort.by("time").descending()), 0);
 
         when(newsService.findAll(PageRequest.of(0, 5, Sort.by("time").descending()))).thenReturn(mockPage);
-        when(newsService.findAll(PageRequest.of(1, 5, Sort.by("time").descending()))).thenReturn(null);
+        when(newsService.findAll(PageRequest.of(1, 5, Sort.by("time").descending()))).thenReturn(mockEmptyPage);
 
+        // positive int param
         // page found
         mockMvc.perform(get("/news/getNewsList").param("page", String.valueOf(pageSuccess)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
+                .andExpect(content().json("{\"content\":[{\"newsID\":1,\"title\":\"title\",\"content\":\"content\",\"time\":\"2021-01-01 00:00:00\"}],\"pageable\":{\"sort\":{\"sorted\":true,\"unsorted\":false,\"empty\":false},\"offset\":0,\"pageNumber\":0,\"pageSize\":5,\"paged\":true,\"unpaged\":false},\"totalPages\":1,\"totalElements\":5,\"last\":true,\"size\":5,\"number\":0,\"numberOfElements\":1,\"first\":true,\"empty\":false}"))
                 .andExpect(jsonPath("$.content").isArray());
     }
 
@@ -141,25 +149,27 @@ public class NewsControllerTest {
         int pageFail = 2;
 
         List<News> newsList = new ArrayList<>();
-        newsList.add(new News(1, "title", "content", LocalDateTime.now()));
-        newsList.add(new News(2, "title", "content", LocalDateTime.now()));
+        LocalDateTime time = LocalDateTime.of(2021, 1, 1, 0, 0);
+        newsList.add(new News(1, "title", "content", time));
 
-        Page<News> mockPage = new PageImpl<>(newsList);
+        Page<News> mockPage = new PageImpl<>(newsList, PageRequest.of(0, 5, Sort.by("time").descending()), 5);
+        Page<News> mockEmptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 5, Sort.by("time").descending()), 0);
 
         when(newsService.findAll(PageRequest.of(0, 5, Sort.by("time").descending()))).thenReturn(mockPage);
-        when(newsService.findAll(PageRequest.of(1, 5, Sort.by("time").descending()))).thenReturn(null);
+        when(newsService.findAll(PageRequest.of(1, 5, Sort.by("time").descending()))).thenReturn(mockEmptyPage);
 
+
+        // positive int param
         // page not found
         mockMvc.perform(get("/news/getNewsList").param("page", String.valueOf(pageFail)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").doesNotExist());
+                .andExpect(content().contentType("application/json"))
+                .andExpect(content().json("{\"content\":[],\"pageable\":{\"sort\":{\"sorted\":true,\"unsorted\":false,\"empty\":false},\"offset\":0,\"pageNumber\":0,\"pageSize\":5,\"paged\":true,\"unpaged\":false},\"totalPages\":0,\"totalElements\":0,\"last\":true,\"size\":5,\"number\":0,\"numberOfElements\":0,\"first\":true,\"empty\":true}"));
     }
 
     @Test
     public void testNewsListPageWithEmptyData() throws Exception {
-        List<News> newsList = new ArrayList<>();
-
-        Page<News> mockEmptyPage = new PageImpl<>(newsList);
+        Page<News> mockEmptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 5, Sort.by("time").descending()), 0);
 
         // empty page
         when(newsService.findAll(PageRequest.of(0, 5, Sort.by("time").descending()))).thenReturn(mockEmptyPage);
@@ -178,7 +188,7 @@ public class NewsControllerTest {
         newsList.add(new News(1, "title", "content", LocalDateTime.now()));
         newsList.add(new News(2, "title", "content", LocalDateTime.now()));
 
-        Page<News> mockNotEmptyPage = new PageImpl<>(newsList);
+        Page<News> mockNotEmptyPage = new PageImpl<>(newsList, PageRequest.of(0, 5, Sort.by("time").descending()), 2);
 
         // not empty page
         when(newsService.findAll(PageRequest.of(0, 5, Sort.by("time").descending()))).thenReturn(mockNotEmptyPage);
@@ -190,14 +200,5 @@ public class NewsControllerTest {
                 .andExpect(model().attribute("total", mockNotEmptyPage.getTotalPages()));
     }
 
-    @Test
-    public void testNewsListPageWithNullData() throws Exception {
-        // null page
-        // bug here
-        // null check should be added
-        when(newsService.findAll(PageRequest.of(1, 5, Sort.by("time").descending()))).thenReturn(null);
 
-        mockMvc.perform(get("/news_list"))
-                .andExpect(status().isNotFound());
-    }
 }
