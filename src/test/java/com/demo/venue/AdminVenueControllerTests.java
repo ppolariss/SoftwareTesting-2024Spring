@@ -34,8 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AdminVenueController.class)
 public class AdminVenueControllerTests {
-    final String CORRECT_OPEN_TIME = "2006-01-02 15:04:05";
-    final String CORRECT_CLOSE_TIME = "2024-04-02 23:20:05";
+    //    "2006-01-02 15:04:05"
+    final String CORRECT_OPEN_TIME = "15:04";
+    final String CORRECT_CLOSE_TIME = "23:20";
 
     @Autowired
     private MockMvc mockMvc;
@@ -51,7 +52,7 @@ public class AdminVenueControllerTests {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
         when(venueService.findAll(pageable))
                 .thenReturn(new PageImpl<>(Collections.singletonList(
-                        new Venue(1, "venue_name", "description", 1, "", "address", "open_time", "close_time")
+                        new Venue(1, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME)
                 ), pageable, 1));
 
         mockMvc.perform(get("/venue_manage"))
@@ -99,7 +100,7 @@ public class AdminVenueControllerTests {
     //    editVenue
     @Test
     public void testEditVenueWithSuccess() throws Exception {
-        Venue venue = new Venue(1, "venue_name", "description", 1, "picture", "address", "open_time", "close_time");
+        Venue venue = new Venue(1, "venue_name", "description", 1, "picture", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME);
         when(venueService.findByVenueID(1))
                 .thenReturn(venue);
 
@@ -171,14 +172,14 @@ public class AdminVenueControllerTests {
     public void testGetVenueListWithSuccess() throws Exception {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
         Page<Venue> page = new PageImpl<>(Collections.singletonList(
-                new Venue(1, "venue_name", "description", 1, "picture", "address", "open_time", "close_time")
+                new Venue(1, "venue_name", "description", 1, "picture", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME)
         ), pageable, 1);
 
         when(venueService.findAll(pageable))
                 .thenReturn(page);
         mockMvc.perform(get("/venueList.do?page=1"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[{\"venueID\":1,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"picture\",\"address\":\"address\",\"open_time\":\"open_time\",\"close_time\":\"close_time\"}]"));
+                .andExpect(content().json("[{\"venueID\":1,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"picture\",\"address\":\"address\",\"open_time\":\"" + CORRECT_OPEN_TIME + "\",\"close_time\":\"" + CORRECT_CLOSE_TIME + "\"}]"));
         verify(venueService).findAll(pageable);
     }
 
@@ -186,14 +187,14 @@ public class AdminVenueControllerTests {
     public void testGetVenueListWithNoParamSuccess() throws Exception {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
         Page<Venue> page = new PageImpl<>(Collections.singletonList(
-                new Venue(1, "venue_name", "description", 1, "picture", "address", "open_time", "close_time")
+                new Venue(1, "venue_name", "description", 1, "picture", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME)
         ), pageable, 1);
 
         when(venueService.findAll(pageable))
                 .thenReturn(page);
         mockMvc.perform(get("/venueList.do"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[{\"venueID\":1,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"picture\",\"address\":\"address\",\"open_time\":\"open_time\",\"close_time\":\"close_time\"}]"));
+                .andExpect(content().json("[{\"venueID\":1,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"picture\",\"address\":\"address\",\"open_time\":\"" + CORRECT_OPEN_TIME + "\",\"close_time\":\"" + CORRECT_CLOSE_TIME + "\"}]"));
         verify(venueService).findAll(pageable);
     }
 
@@ -394,11 +395,11 @@ public class AdminVenueControllerTests {
         verify(venueService).update(any(Venue.class));
     }
 
-    //    TODO
+
     @Test
     public void testModifyVenueWithEmptyPicSuccess() throws Exception {
         when(venueService.findByVenueID(1))
-                .thenReturn(new Venue(1, "venue_name", "description", 1, "picture", "address", "open_time", "close_time"));
+                .thenReturn(new Venue(1, "venue_name", "description", 1, "pic1", "address", "open_time", "close_time"));
         mockMvc.perform(MockMvcRequestBuilders.multipart("/modifyVenue.do")
                         .file(new MockMultipartFile("picture", "", "image/jpg", new byte[0]))
                         .param("venueID", "1")
@@ -411,7 +412,7 @@ public class AdminVenueControllerTests {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_manage"));
         verify(venueService).findByVenueID(1);
-        verify(venueService).update(new Venue(1, "venue_name", "description", 1, "picture", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME));
+        verify(venueService).update(new Venue(1, "venue_name", "description", 1, "pic1", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME));
     }
 
     @Test
@@ -475,8 +476,8 @@ public class AdminVenueControllerTests {
                             .param("address", "address")
                             .param("description", "description")
                             .param("price", "1.5")
-                            .param("open_time", "open_time")
-                            .param("close_time", "close_time"))
+                            .param("open_time", CORRECT_OPEN_TIME)
+                            .param("close_time", CORRECT_CLOSE_TIME))
                     .andExpect(status().isBadRequest());
         } catch (Exception e) {
             fail();

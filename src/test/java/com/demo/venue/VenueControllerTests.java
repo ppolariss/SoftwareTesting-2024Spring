@@ -25,8 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(VenueController.class)
 public class VenueControllerTests {
-    final String CORRECT_OPEN_TIME = "2006-01-02 15:04:05";
-    final String CORRECT_CLOSE_TIME = "2024-04-02 23:20:05";
+    final String CORRECT_OPEN_TIME = "15:04";
+    final String CORRECT_CLOSE_TIME = "23:20";
 
     @Autowired
     private MockMvc mockMvc;
@@ -37,7 +37,7 @@ public class VenueControllerTests {
     //    toGymPage
     @Test
     public void testToGymPageWithSuccess() throws Exception {
-        Venue venue = new Venue(2, "venue_name", "description", 1, "picture", "address", "open_time", "close_time");
+        Venue venue = new Venue(2, "venue_name", "description", 1, "picture", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME);
         when(venueService.findByVenueID(2))
                 .thenReturn(venue);
 
@@ -214,16 +214,5 @@ public class VenueControllerTests {
             e.printStackTrace();
             fail();
         }
-
-//                    .andExpect(content().json("[{\"venueID\":1,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":2,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":3,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":4,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":5,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":6,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":7,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":8,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":9,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}," +
-//                            "{\"venueID\":10,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"\",\"address\":\"address\",\"open_time\":\"2006-01-02 15:04:05\",\"close_time\":\"2024-04-02 23:20:05\"}]"));
     }
 }
