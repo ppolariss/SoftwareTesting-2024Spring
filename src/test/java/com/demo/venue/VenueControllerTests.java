@@ -13,17 +13,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 
 import javax.persistence.EntityNotFoundException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(VenueController.class)
@@ -58,20 +55,32 @@ public class VenueControllerTests {
             mockMvc.perform(get("/venue?venueID=3"))
                     .andExpect(status().isNotFound());
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
     }
 
     @Test
     public void testToGymPageWithNoParam() throws Exception {
-        mockMvc.perform(get("/venue"))
-                .andExpect(status().isBadRequest());
+        try {
+            mockMvc.perform(get("/venue"))
+                    .andExpect(status().isBadRequest());
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
     }
 
     @Test
     public void testToGymPageWithNegParam() throws Exception {
-        mockMvc.perform(get("/venue?venueID=-1"))
-                .andExpect(status().isBadRequest());
+//        org.springframework.web.util.NestedServletException: Request processing failed; nested exception is org.thymeleaf.exceptions.TemplateInputException: An error happened during template parsing (template: "class path resource [templates/venue.html]")
+        try {
+            mockMvc.perform(get("/venue?venueID=-1"))
+                    .andExpect(status().isBadRequest());
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
     }
 
     @Test
@@ -129,8 +138,13 @@ public class VenueControllerTests {
 
     @Test
     public void testVenue_listWithNegParam() throws Exception {
-        mockMvc.perform(post("/venuelist/getVenueList?page=-1"))
-                .andExpect(status().isBadRequest());
+        try {
+            mockMvc.perform(get("/venuelist/getVenueList?page=-1"))
+                    .andExpect(status().isBadRequest());
+        } catch (Exception e) {
+//            NestedServletException
+            fail();
+        }
     }
 
     @Test
