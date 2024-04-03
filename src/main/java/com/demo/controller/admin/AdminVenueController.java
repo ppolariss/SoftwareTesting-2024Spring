@@ -50,7 +50,9 @@ public class AdminVenueController {
     @GetMapping("/venueList.do")
     @ResponseBody
     public List<Venue> getVenueList(@RequestParam(value = "page", defaultValue = "1") int page) {
-        Pageable pageable = PageRequest.of(page - 1, 10, Sort.by("venueID").ascending());
+        Pageable pageable = PageRequest.of(page - 1, 5, Sort.by("venueID").ascending());
+        System.out.println(venueService.findAll(pageable).getTotalPages());
+        System.out.println(venueService.findAll(pageable).getContent());
         return venueService.findAll(pageable).getContent();
 
     }
