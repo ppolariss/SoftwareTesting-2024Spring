@@ -168,7 +168,7 @@ public class AdminOrderControllerTests {
     }
     @Test
     public void testPassOrderWithNotFoundID() throws Exception {
-        int orderID = -1;
+        int orderID = 1;
         doThrow(EmptyResultDataAccessException.class).when(orderService).confirmOrder(orderID);
 
         mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
@@ -203,24 +203,34 @@ public class AdminOrderControllerTests {
         doNothing().when(orderDao).updateState(STATE_REJECT,orderID);
 
         mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));;
         verify(orderService, times(1)).rejectOrder(orderID);
-        //verify(orderDao).updateState(STATE_WAIT,mockOrder.getOrderID());
     }
-
     @Test
-    public void testRejecthOrderWithInvalidOrderID() throws Exception {
-        int orderID = -1;
-        when(orderDao.findByOrderID(orderID)).thenReturn(null);
+    public void testRejectOrderWithNotFoundID() throws Exception {
+        int orderID = 1;
+        doThrow(EmptyResultDataAccessException.class).when(orderService).rejectOrder(orderID);
 
-        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID))));
-        assertTrue(exception.getRootCause() instanceof  RuntimeException);
-
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("false"));
+        verify(orderService, times(1)).rejectOrder(orderID);
     }
-
+    @Test
+    public void testRejectOrderWithNegativeID() throws Exception {
+        int orderID = -1;
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isBadRequest());
+    }
     @Test
     public void testRejectOrderWithStringID() throws Exception {
         mockMvc.perform(post("/rejectOrder.do").param("orderID", "nct127"))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testRejectOrderWithEmptyParam() throws Exception {
+        mockMvc.perform(post("/rejectOrder.do"))
                 .andExpect(status().isBadRequest());
     }
 
