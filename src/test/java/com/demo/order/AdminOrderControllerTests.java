@@ -28,9 +28,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.NestedServletException;
 
+import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @WebMvcTest(AdminOrderController.class)
 public class AdminOrderControllerTests {
@@ -62,7 +65,29 @@ public class AdminOrderControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reservation_manage"))
                 .andExpect(model().attribute("order_list",mockOrderVos))
-                .andExpect(model().attribute("total",mockPage.getTotalPages()));
+                .andExpect(model().attribute("total",1));
+    }
+    @Test
+    public void testReservationManageWithBothOrdersPaged() throws Exception {
+        // mock data
+        List<Order> mockOrders = IntStream.range(0,15)
+                .mapToObj(i -> new Order())
+                .collect(Collectors.toList());
+        List<OrderVo> mockOrderVos = IntStream.range(0,15)
+                .mapToObj(i -> new OrderVo())
+                .collect(Collectors.toList());
+        Pageable order_pageable= PageRequest.of(0,10, Sort.by("orderTime").descending());
+        Page<Order> mockPage = new PageImpl<>(mockOrders,order_pageable,mockOrders.size());
+
+        when(orderService.findAuditOrder()).thenReturn(mockOrders);
+        when(orderVoService.returnVo(mockOrders)).thenReturn(mockOrderVos);
+        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(mockPage);
+
+        mockMvc.perform(get("/reservation_manage"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/reservation_manage"))
+                .andExpect(model().attribute("order_list",mockOrderVos))
+                .andExpect(model().attribute("total",2));
     }
     @Test
     public void testReservationManageWithoutAuditOrders() throws Exception {
@@ -71,13 +96,12 @@ public class AdminOrderControllerTests {
         Page<Order> mockPage = new PageImpl<>(mockOrders);
         List<OrderVo> mockOrderVos = new ArrayList<>();
 
-        when(orderService.findAuditOrder()).thenReturn(null);
+        when(orderService.findAuditOrder()).thenThrow(EntityNotFoundException.class);
         when(orderService.findNoAuditOrder(order_pageable)).thenReturn(mockPage);
 
         mockMvc.perform(get("/reservation_manage"))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(view().name("admin/reservation_manage"))
-                .andExpect(model().attribute("order_list",mockOrderVos))
                 .andExpect(model().attribute("total",mockPage.getTotalPages()));
     }
     @Test
@@ -89,13 +113,13 @@ public class AdminOrderControllerTests {
 
         when(orderService.findAuditOrder()).thenReturn(mockOrders);
         when(orderVoService.returnVo(mockOrders)).thenReturn(mockOrderVos);
-        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(null);
+        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
 
         mockMvc.perform(get("/reservation_manage"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reservation_manage"))
                 .andExpect(model().attribute("order_list",mockOrderVos))
-                .andExpect(model().attribute("total",mockEmptyPage.getTotalPages()));
+                .andExpect(model().attribute("total",0));
     }
 
 
