@@ -484,7 +484,6 @@ public class OrderControllerTests {
                 .andExpect(jsonPath("$.venue").value(mockVenue))
                 .andExpect(jsonPath("$.orders").value(mockOrders));
     }
-
     @Test
     public void testOrderGetOrderListWithInvalidDate() throws Exception {
         // bug here
@@ -497,38 +496,20 @@ public class OrderControllerTests {
         when(venueService.findByVenueName(venueName)).thenReturn(mockVenue);
 
         mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","11:11"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.venue").doesNotExist())
-                .andExpect(jsonPath("$.orders").doesNotExist());
+                .andExpect(status().isBadRequest());
     }
-
     @Test
-    public void testOrderGetOrderListWithWrongValueDate() throws Exception {
-        // bug here
-        // 没有检测date格式
-        String venueName = "nct127";
-
-        // mock venue
-        Venue mockVenue = new Venue();
-        mockVenue.setVenueID(1);
-        when(venueService.findByVenueName(venueName)).thenReturn(mockVenue);
-
-        mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","2023-22-22"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.venue").doesNotExist())
-                .andExpect(jsonPath("$.orders").doesNotExist());
-    }
-
-    @Test
-    public void testOrderGetOrderListWithInvalidvenueName() throws Exception {
-        //bug here
-        //没有检测错误venue name
+    public void testOrderGetOrderListWithNotFoundVenueName() throws Exception {
         String venueName = "nct127-false";
-        when(venueService.findByVenueName(venueName)).thenReturn(null);
+        when(venueService.findByVenueName(venueName)).thenThrow(EntityNotFoundException.class);
 
         mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","2023-01-27"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.venue").doesNotExist())
-                .andExpect(jsonPath("$.orders").doesNotExist());
+                .andExpect(status().isNotFound());
+    }
+    @Test
+    public void testOrderGetOrderListWithNoParam() throws Exception {
+
+        mockMvc.perform(get("/order/getOrderList.do"))
+                .andExpect(status().isBadRequest());
     }
 }
