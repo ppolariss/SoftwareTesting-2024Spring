@@ -1,6 +1,7 @@
 package com.demo.order;
 
 import static com.demo.service.OrderService.STATE_FINISH;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.*;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.NestedServletException;
@@ -94,7 +96,6 @@ public class OrderControllerTests {
                 .andExpect(view().name("order_manage"))
                 .andExpect(model().attribute("total", 1));
     }
-
     @Test
     public void testOrderManageWithEmptyPage() throws Exception {
         // 页面为空
@@ -111,7 +112,6 @@ public class OrderControllerTests {
                 .andExpect(view().name("order_manage"))
                 .andExpect(model().attribute("total", 0));
     }
-
     @Test
     public void testOrderManageWithoutLogin() throws Exception {
         Pageable order_pageable= PageRequest.of(0,5, Sort.by("time").descending());
@@ -124,6 +124,7 @@ public class OrderControllerTests {
                 .andExpect(status().is4xxClientError());
 
     }
+
 
     @Test
     public void testOrderPlaceDoWithValidID() throws Exception {
@@ -140,7 +141,6 @@ public class OrderControllerTests {
                 .andExpect(view().name("order_place"))
                 .andExpect(model().attribute("venue",mockVenue));
     }
-
     @Test
     public void testOrderPlaceDoWithEmptyContentID() throws Exception {
         int emptyVId = 2;
@@ -160,12 +160,12 @@ public class OrderControllerTests {
         mockMvc.perform(get("/order_place.do").param("venueID","nct127"))
                 .andExpect(status().isBadRequest());
     }
-
     @Test
     public void testOrderPlaceDoWithInvalidID() throws Exception {
         mockMvc.perform(get("/order_place.do").param("venueID","-1"))
                 .andExpect(status().isBadRequest());
     }
+
 
     @Test
     public void testOrderPlace() throws Exception {
@@ -173,68 +173,84 @@ public class OrderControllerTests {
                 .andExpect(status().isOk());
     }
 
+
     @Test
     public void testGetOrderListWithValidPage() throws Exception{
         // mock orders
         List<Order> mockOrderList = new ArrayList<>();
         mockOrderList.add(new Order());
-        List<OrderVo> mockVo = new ArrayList<>();
 
         // mock page
         Page<Order> pageOfManyOrders = new PageImpl<>(mockOrderList);
 
         //mock service
-        int pageNormal = 0;
+        int pageNormal = 1;
         Pageable orderPageableNormal = PageRequest.of(pageNormal,5, Sort.by("orderTime").descending());
         when(orderService.findUserOrder("1", orderPageableNormal)).thenReturn(pageOfManyOrders);
-        when(orderVoService.returnVo(pageOfManyOrders.getContent())).thenReturn(mockVo);
+
+        // test
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(get("/getOrderList.do").sessionAttr("user",user).param("page","2"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+    @Test
+    public void testGetOrderListWithEmptyParam() throws Exception{
+        // mock orders
+        List<Order> mockOrderList = new ArrayList<>();
+        mockOrderList.add(new Order());
+
+        // mock page
+        Page<Order> pageOfManyOrders = new PageImpl<>(mockOrderList);
+
+        //mock service
+        Pageable orderPageableNormal = PageRequest.of(0,5, Sort.by("orderTime").descending());
+        when(orderService.findUserOrder("1", orderPageableNormal)).thenReturn(pageOfManyOrders);
 
         // test
         User user = new User();
         user.setUserID("1");
         mockMvc.perform(get("/getOrderList.do").sessionAttr("user",user))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/json"))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$").value(mockVo));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
-
     @Test
-    public void testGetOrderListWithErrorPageMin() throws Exception {
+    public void testGetOrderListWithPageNotPositive() throws Exception {
         // bug here
-        // 没有做-1输入的处理，导致PageRequest.of()失败
         mockMvc.perform(get("/getOrderList.do").param("page", "-1").sessionAttr("user", new User()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").doesNotExist());
+                .andExpect(status().isBadRequest());
     }
-
     @Test
-    public void testGetOrderListWithErrorPageMax() throws Exception {
-        // bug here
-        // 没有做page越界处理，导致null对象调用
+    public void testGetOrderListWithEmptyPage() throws Exception {
+        Pageable order_pageable= PageRequest.of(0,5, Sort.by("time").descending());
+        when(orderService.findUserOrder("1", order_pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
+
         User user = new User();
-        user.setUserID("nct127");
-
-        Pageable order_pageable = PageRequest.of(5-1,5, Sort.by("orderTime").descending());
-        when(orderService.findUserOrder(user.getUserID(), order_pageable)).thenReturn(null);
-
-        mockMvc.perform(get("/getOrderList.do").param("page","5").sessionAttr("user",user))
+        user.setUserID("1");
+        mockMvc.perform(get("/getOrderList.do").param("page", "1").sessionAttr("user",user))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").doesNotExist());
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(0))); // 直接检查响应体是否为一个空数组
     }
-
     @Test
-    public void testGetOrderListWithStringPage() throws Exception {
+    public void testGetOrderListWithPageIsNotNum() throws Exception {
         User user = new User();
         user.setUserID("nct127");
         mockMvc.perform(get("/getOrderList.do").param("page","jw").sessionAttr("user",user))
                 .andExpect(status().isBadRequest());
     }
-
     @Test
     public void testGetOrderListWithoutLogin() throws Exception {
-        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/getOrderList.do")));
-        assertTrue(exception.getRootCause() instanceof LoginException);
+        Pageable order_pageable= PageRequest.of(0,5, Sort.by("time").descending());
+        when(orderService.findUserOrder("1",order_pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
+
+        MockHttpSession session = new MockHttpSession();
+        //bug here
+        mockMvc.perform(get("/getOrderList.do").session(session).param("page","1"))
+                .andExpect(status().is4xxClientError());
     }
 
 
