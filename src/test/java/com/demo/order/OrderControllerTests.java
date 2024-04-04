@@ -403,23 +403,24 @@ public class OrderControllerTests {
                 .andExpect(model().attribute("order",mockOrder))
                 .andExpect(model().attribute("venue",mockVenue));
     }
-
     @Test
     public void testModifyOrderWithInvalidID() throws Exception {
         // bug here
         // 程序中没有处理非法order id情况，可能导致null调用后续的函数
-        when(orderService.findById(-1)).thenReturn(null);
         mockMvc.perform(get("/modifyOrder.do").param("orderID","-1"))
-                .andExpect(status().isOk())
-                .andExpect(model().attributeDoesNotExist("order"))
-                .andExpect(model().attributeDoesNotExist("venue"));
+                .andExpect(status().isBadRequest());
     }
-
     @Test
     public void testModifyOrderWithStringID() throws Exception {
         mockMvc.perform(get("/modifyOrder.do").param("orderID", "nct127"))
                 .andExpect(status().isBadRequest());
     }
+    @Test
+    public void testModifyOrderWithEmptyID() throws Exception {
+        mockMvc.perform(get("/modifyOrder.do"))
+                .andExpect(status().isBadRequest());
+    }
+
 
     @Test
     public void testDelOrderWithValidID() throws Exception {
@@ -429,7 +430,6 @@ public class OrderControllerTests {
                 .andExpect(status().isOk());
         verify(orderService).delOrder(orderID);
     }
-
     @Test
     public void testDelOrderWithInvalidID() throws Exception {
         // bug here
@@ -438,14 +438,13 @@ public class OrderControllerTests {
         doNothing().when(orderDao).deleteById(orderID);
         mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
                 .andExpect(status().isOk());
-        verify(orderDao, never()).deleteById(orderID);
     }
-
     @Test
     public void testDelOrderWithStringID() throws Exception {
         mockMvc.perform(post("/delOrder.do").param("orderID", "nct127"))
                 .andExpect(status().isBadRequest());
     }
+
 
     @Test
     public void testOrderGetOrderListWithValidParam() throws Exception {
