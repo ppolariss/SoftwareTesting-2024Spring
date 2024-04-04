@@ -431,17 +431,30 @@ public class OrderControllerTests {
         verify(orderService).delOrder(orderID);
     }
     @Test
+    public void testDelOrderWithNotFoundID() throws Exception {
+        //TODO: 直接抛出异常是否会导致无法测试？
+        int orderID = 127;
+        doThrow(EmptyResultDataAccessException.class).when(orderService).delOrder(orderID);
+        mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("true"));
+        verify(orderService).delOrder(orderID);
+    }
+    @Test
     public void testDelOrderWithInvalidID() throws Exception {
-        // bug here
-        // 错误的id，没有阻拦调用service
         int orderID = -1;
         doNothing().when(orderDao).deleteById(orderID);
         mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
     }
     @Test
     public void testDelOrderWithStringID() throws Exception {
         mockMvc.perform(post("/delOrder.do").param("orderID", "nct127"))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testDelOrderWithEmptyID() throws Exception {
+        mockMvc.perform(post("/delOrder.do"))
                 .andExpect(status().isBadRequest());
     }
 
