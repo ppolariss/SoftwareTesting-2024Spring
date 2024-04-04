@@ -321,6 +321,18 @@ public class OrderControllerTests {
     public void testAddOrderWithFailed() throws Exception {
         //TODO：这里没写
     }
+    @Test
+    public void testAddOrderWithoutLogin() throws Exception {
+        doNothing().when(orderService).submit(anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        MockHttpSession session = new MockHttpSession();
+        mockMvc.perform(post("/addOrder.do")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "-1")
+                        .session(session))
+                .andExpect(status().is4xxClientError());
+    }
 
     @Test
     public void testFinishOrderWithValidID() throws Exception {
