@@ -29,6 +29,8 @@ import org.springframework.data.domain.*;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.NestedServletException;
 
+import javax.persistence.EntityNotFoundException;
+import javax.swing.text.html.parser.Entity;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -115,8 +117,8 @@ public class OrderControllerTests {
         int validId = 1;
 
         // mock service
-        Venue mockVenue = new Venue(1,"name","description"
-                ,200,"","address","09:00","20:00");
+        Venue mockVenue = new Venue();
+        mockVenue.setVenueID(1);
         when(venueService.findByVenueID(validId)).thenReturn(mockVenue);
 
         // test valid id
@@ -127,20 +129,28 @@ public class OrderControllerTests {
     }
 
     @Test
-    public void testOrderPlaceDoWithInvalidID() throws Exception {
+    public void testOrderPlaceDoWithEmptyContentID() throws Exception {
         int emptyVId = 2;
-        when(venueService.findByVenueID(emptyVId)).thenReturn(null);
+        when(venueService.findByVenueID(emptyVId)).thenThrow(EntityNotFoundException.class);
 
-        // test error id
         mockMvc.perform(get("/order_place.do").param("venueID",String.valueOf(emptyVId)))
-                .andExpect(status().isOk())
-                .andExpect(view().name("order_place"))
-                .andExpect(model().attributeDoesNotExist("venue"));
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("order_place"));
     }
-
+    @Test
+    public void testOrderPlaceDoWithEmptyParam() throws Exception {
+        mockMvc.perform(get("/order_place.do"))
+                .andExpect(status().isBadRequest());
+    }
     @Test
     public void testOrderPlaceDoWithStringID() throws Exception {
         mockMvc.perform(get("/order_place.do").param("venueID","nct127"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testOrderPlaceDoWithInvalidID() throws Exception {
+        mockMvc.perform(get("/order_place.do").param("venueID","-1"))
                 .andExpect(status().isBadRequest());
     }
 
