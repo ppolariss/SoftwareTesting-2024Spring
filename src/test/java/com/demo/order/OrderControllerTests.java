@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
@@ -319,7 +320,16 @@ public class OrderControllerTests {
     }
     @Test
     public void testAddOrderWithFailed() throws Exception {
-        //TODO：这里没写
+        doThrow(EntityNotFoundException.class).when(orderService).submit(anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/addOrder.do")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "-1")
+                        .sessionAttr("user",user))
+                .andExpect(status().isNotFound());
     }
     @Test
     public void testAddOrderWithoutLogin() throws Exception {
@@ -333,6 +343,7 @@ public class OrderControllerTests {
                         .session(session))
                 .andExpect(status().is4xxClientError());
     }
+
 
     @Test
     public void testFinishOrderWithValidID() throws Exception {
