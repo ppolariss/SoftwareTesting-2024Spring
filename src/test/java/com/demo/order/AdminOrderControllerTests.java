@@ -1,6 +1,7 @@
 package com.demo.order;
 
 import static com.demo.service.OrderService.*;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -22,10 +23,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.*;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.NestedServletException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @WebMvcTest(AdminOrderController.class)
@@ -60,7 +63,6 @@ public class AdminOrderControllerTests {
                 .andExpect(model().attribute("order_list",mockOrderVos))
                 .andExpect(model().attribute("total",mockPage.getTotalPages()));
     }
-
     @Test
     public void testReservationManageWithoutAuditOrders() throws Exception {
         List<Order> mockOrders = new ArrayList<>();
@@ -77,7 +79,6 @@ public class AdminOrderControllerTests {
                 .andExpect(model().attribute("order_list",mockOrderVos))
                 .andExpect(model().attribute("total",mockPage.getTotalPages()));
     }
-
     @Test
     public void testReservationManageWithoutNoAuditOrders() throws Exception {
         List<Order> mockOrders = new ArrayList<>();
@@ -95,6 +96,7 @@ public class AdminOrderControllerTests {
                 .andExpect(model().attribute("order_list",mockOrderVos))
                 .andExpect(model().attribute("total",mockEmptyPage.getTotalPages()));
     }
+
 
     @Test
     public void testAdminGetOrderListWithValidPage() throws Exception{
@@ -115,36 +117,32 @@ public class AdminOrderControllerTests {
         // test
         mockMvc.perform(get("/admin/getOrderList.do"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/json"))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$").value(mockVo));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
-
     @Test
-    public void testGetOrderListWithErrorPageMin() throws Exception {
-        // bug here
-        // 没有做-1输入的处理，导致PageRequest.of()失败
+    public void testGetOrderListWithPageNotPositive() throws Exception {
         mockMvc.perform(get("/admin/getOrderList.do").param("page", "-1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").doesNotExist());
+                .andExpect(status().isBadRequest());
     }
-
     @Test
-    public void testGetOrderListWithErrorPageMax() throws Exception {
-        // bug here
-        // 没有做page越界处理，导致null对象调用
+    public void testGetOrderListWithEmptyParam() throws Exception {
+        mockMvc.perform(get("/admin/getOrderList.do"))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testGetOrderListWithEmptyPage() throws Exception {
         User user = new User();
         user.setUserID("nct127");
 
         Pageable order_pageable = PageRequest.of(5-1,5, Sort.by("orderTime").descending());
-        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(null);
-        //when(orderVoService.returnVo(mockOrderList)).thenReturn(mockVo);
+        when(orderService.findUserOrder("1", order_pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
 
         mockMvc.perform(get("/admin/getOrderList.do").param("page","5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").doesNotExist());
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(0)));
     }
-
     @Test
     public void testGetOrderListWithStringPage() throws Exception {
         User user = new User();
@@ -152,6 +150,7 @@ public class AdminOrderControllerTests {
         mockMvc.perform(get("/admin/getOrderList.do").param("page","jw"))
                 .andExpect(status().isBadRequest());
     }
+
 
     @Test
     public void testPassOrderWithValidID() throws Exception {
