@@ -105,7 +105,7 @@ public class OrderController {
     @PostMapping("/modifyOrder")
     @ResponseBody
     public boolean modifyOrder(String venueName, String date, String startTime, int hours,int orderID, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        date=startTime+":00";
+        date+=" "+startTime+":00";
         DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         LocalDateTime ldt = LocalDateTime.parse(date,df);
         Object user=request.getSession().getAttribute("user");

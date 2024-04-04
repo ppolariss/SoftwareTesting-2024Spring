@@ -383,7 +383,7 @@ public class OrderControllerTests {
 
 
     @Test
-    public void testModifyOrderWithValidID() throws Exception {
+    public void testModifyOrderDoWithValidID() throws Exception {
         int validId = 1;
         // mock orders
         Order mockOrder = new Order();
@@ -404,21 +404,145 @@ public class OrderControllerTests {
                 .andExpect(model().attribute("venue",mockVenue));
     }
     @Test
-    public void testModifyOrderWithInvalidID() throws Exception {
+    public void testModifyOrderDoWithInvalidID() throws Exception {
         // bug here
         // 程序中没有处理非法order id情况，可能导致null调用后续的函数
         mockMvc.perform(get("/modifyOrder.do").param("orderID","-1"))
                 .andExpect(status().isBadRequest());
     }
     @Test
-    public void testModifyOrderWithStringID() throws Exception {
+    public void testModifyOrderDoWithStringID() throws Exception {
         mockMvc.perform(get("/modifyOrder.do").param("orderID", "nct127"))
                 .andExpect(status().isBadRequest());
     }
     @Test
-    public void testModifyOrderWithEmptyID() throws Exception {
+    public void testModifyOrderDoWithEmptyID() throws Exception {
         mockMvc.perform(get("/modifyOrder.do"))
                 .andExpect(status().isBadRequest());
+    }
+
+
+    @Test
+    public void testModifyOrderWithSuccess() throws Exception {
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime ldt = LocalDateTime.parse("2024-03-30 10:00:00",df);
+        doNothing().when(orderService).updateOrder(anyInt(),anyString(),any(LocalDateTime.class),anyInt(),anyString());
+
+        User user = new User();
+        user.setUserID("1");
+
+        mockMvc.perform(post("/modifyOrder")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "2")
+                        .param("orderID","2")
+                        .sessionAttr("user",user))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("order_manage"))
+                .andExpect(content().string("true"));
+        verify(orderService).updateOrder(2,"Venue1",ldt,2,"1");
+    }
+    @Test
+    public void testModifyOrderWithErrorDateTime() throws Exception {
+        // 都是自带解析 格式和内容错误检查一种即可
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/modifyOrder")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-33-33")
+                        .param("startTime", "10:00")
+                        .param("hours", "2")
+                        .param("orderID","2")
+                        .sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testModifyOrderWithErrorFloatHours() throws Exception {
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/modifyOrder")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "1.5")
+                        .param("orderID","2")
+                        .sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testModifyOrderWithErrorNegativeHours() throws Exception {
+        doNothing().when(orderService).updateOrder(anyInt(),anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/modifyOrder")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "-1")
+                        .param("orderID","2")
+                        .sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testModifyOrderWithErrorFloatOrderID() throws Exception {
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/modifyOrder")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "2")
+                        .param("orderID","2.5")
+                        .sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testModifyOrderWithErrorNegativeOrderID() throws Exception {
+        doNothing().when(orderService).updateOrder(anyInt(),anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/modifyOrder")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "2")
+                        .param("orderID","-1")
+                        .sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testModifyOrderWithNoParam() throws Exception {
+        doNothing().when(orderService).updateOrder(anyInt(),anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        mockMvc.perform(post("/modifyOrder"))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testModifyOrderWithFailed() throws Exception {
+        doThrow(EntityNotFoundException.class).when(orderService).updateOrder(anyInt(),anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/modifyOrder")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "-1")
+                        .param("orderID","2")
+                        .sessionAttr("user",user))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("false"));
+    }
+    @Test
+    public void testModifyOrderWithoutLogin() throws Exception {
+        doNothing().when(orderService).updateOrder(anyInt(),anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        MockHttpSession session = new MockHttpSession();
+        mockMvc.perform(post("/modifyOrder")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "-1")
+                        .session(session))
+                .andExpect(status().is4xxClientError());
     }
 
 
