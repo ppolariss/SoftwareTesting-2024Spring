@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.*;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.NestedServletException;
 
@@ -34,7 +35,10 @@ import javax.swing.text.html.parser.Entity;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 
 @WebMvcTest(OrderController.class)
@@ -56,26 +60,31 @@ public class OrderControllerTests {
     private OrderDao orderDao;
 
     @Test
-    public void testOrderManageWithUserHaveManyOrders() throws Exception {
+    public void testOrderManageWithManyPage() throws Exception {
+        List<Order> orders = IntStream.range(0,7)
+                .mapToObj(i -> new Order())
+                .collect(Collectors.toList());
+
+        Pageable order_pageable = PageRequest.of(0,5, Sort.by("orderTime").descending());
+        Page<Order> pageWithOrders = new PageImpl<>(new ArrayList<>(), order_pageable, orders.size());
+
+        when(orderService.findUserOrder("1",order_pageable)).thenReturn(pageWithOrders);
+
+        // test user have many orders
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(get("/order_manage").sessionAttr("user",user))
+                .andExpect(status().isOk())
+                .andExpect(view().name("order_manage"))
+                .andExpect(model().attribute("total", 2));
+    }
+    @Test
+    public void testOrderManageWithSinglePage() throws Exception {
         int userManyOrders = 27;
 
-        //mock orders
-        Order mockOrder1 = new Order(29, "yonghu", 16, 2,
-                LocalDateTime.of(2020, 1, 2, 18, 16, 8),
-                LocalDateTime.of(2020, 1, 24, 11, 0, 0), 3, 1500);
-        Order mockOrder2 = new Order(30, "yonghu",17,2,
-                LocalDateTime.of(2020,1,2,18,16,21),
-                LocalDateTime.of(2020,1,25,11,0,0),3,900);
-        List<Order> mockOrderList =  new ArrayList<>();
-        mockOrderList.add(mockOrder1);
-        mockOrderList.add(mockOrder2);
-
-        // mock page
-        Page<Order> pageOfManyOrders = new PageImpl<>(mockOrderList);
-
-        //mock service
+        Order mockOrder = new Order();
         Pageable order_pageable = PageRequest.of(0,5, Sort.by("orderTime").descending());
-        when(orderService.findUserOrder(String.valueOf(userManyOrders), order_pageable)).thenReturn(pageOfManyOrders);
+        when(orderService.findUserOrder(String.valueOf(userManyOrders), order_pageable)).thenReturn(new PageImpl<>(Collections.singletonList(mockOrder), order_pageable, 1));
 
         // test user have many orders
         User user = new User();
@@ -83,19 +92,16 @@ public class OrderControllerTests {
         mockMvc.perform(get("/order_manage").sessionAttr("user",user))
                 .andExpect(status().isOk())
                 .andExpect(view().name("order_manage"))
-                .andExpect(model().attribute("total", pageOfManyOrders.getTotalPages()));
+                .andExpect(model().attribute("total", 1));
     }
 
     @Test
-    public void testOrderManageWithUserHaveNoOrders() throws Exception {
+    public void testOrderManageWithEmptyPage() throws Exception {
+        // 页面为空
         int userNoOrders = 19;
 
         Pageable order_pageable = PageRequest.of(0,5, Sort.by("orderTime").descending());
-        when(orderService.findUserOrder(String.valueOf(userNoOrders),order_pageable)).thenReturn(null);
-
-        //mock 19's orders and expected page
-        List<Order> mockEmpty =  new ArrayList<>();
-        Page<Order> pageOfEmptyOrders = new PageImpl<>(mockEmpty);
+        when(orderService.findUserOrder(String.valueOf(userNoOrders),order_pageable)).thenReturn(new PageImpl<>(Collections.emptyList(), order_pageable,0));
 
         // test user have no orders
         User user = new User();
@@ -103,13 +109,20 @@ public class OrderControllerTests {
         mockMvc.perform(get("/order_manage").sessionAttr("user",user))
                 .andExpect(status().isOk())
                 .andExpect(view().name("order_manage"))
-                .andExpect(model().attribute("total", pageOfEmptyOrders.getTotalPages()));
+                .andExpect(model().attribute("total", 0));
     }
 
     @Test
     public void testOrderManageWithoutLogin() throws Exception {
-        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/order_manage")));
-        assertTrue(exception.getRootCause() instanceof LoginException);
+        Pageable order_pageable= PageRequest.of(0,10, Sort.by("time").descending());
+        when(orderService.findUserOrder("1",order_pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
+
+        MockHttpSession session = new MockHttpSession();
+        //bug here
+        mockMvc.perform(get("/order_manage").session(session))
+                .andExpect(status().is4xxClientError());
+
     }
 
     @Test
