@@ -254,20 +254,72 @@ public class OrderControllerTests {
     }
 
 
-
-    //TODO：date有问题导致其他代码没法跑，所以相关测试都没写，包括/modifyOrder和/AddOrder
     @Test
-    public void testAddOrderWithoutLogin() throws Exception {
-        //代码 date有问题！！
+    public void testAddOrderWithSuccess() throws Exception {
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime ldt = LocalDateTime.parse("2024-03-30 10:00:00",df);
+        doNothing().when(orderService).submit(anyString(),any(LocalDateTime.class),anyInt(),anyString());
+
+        User user = new User();
+        user.setUserID("1");
+
         mockMvc.perform(post("/addOrder.do")
                         .param("venueName", "Venue1")
                         .param("date", "2024-03-30")
                         .param("startTime", "10:00")
-                        .param("hours", "2"))
-                .andExpect(status().isBadRequest())
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof NestedServletException))
-                .andExpect(result -> assertTrue(result.getResolvedException().getCause() instanceof LoginException))
-                .andExpect(result -> assertEquals("请登录！", result.getResolvedException().getCause().getMessage()));
+                        .param("hours", "2")
+                        .sessionAttr("user",user))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("order_manage"));
+        verify(orderService).submit("Venue1",ldt,2,"1");
+    }
+    @Test
+    public void testAddOrderWithErrorDateTime() throws Exception {
+        // 都是自带解析 格式和内容错误检查一种即可
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/addOrder.do")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-33-33")
+                        .param("startTime", "10:00")
+                        .param("hours", "2")
+                        .sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testAddOrderWithErrorFloatHours() throws Exception {
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/addOrder.do")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "1.5")
+                        .sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testAddOrderWithErrorNegativeHours() throws Exception {
+        doNothing().when(orderService).submit(anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        User user = new User();
+        user.setUserID("1");
+        mockMvc.perform(post("/addOrder.do")
+                        .param("venueName", "Venue1")
+                        .param("date", "2024-03-30")
+                        .param("startTime", "10:00")
+                        .param("hours", "-1")
+                        .sessionAttr("user",user))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testAddOrderWithNoParam() throws Exception {
+        doNothing().when(orderService).submit(anyString(),any(LocalDateTime.class),anyInt(),anyString());
+        mockMvc.perform(post("/addOrder.do"))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testAddOrderWithFailed() throws Exception {
+        //TODO：这里没写
     }
 
     @Test
