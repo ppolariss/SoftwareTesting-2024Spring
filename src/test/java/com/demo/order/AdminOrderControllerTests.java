@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -161,26 +162,37 @@ public class AdminOrderControllerTests {
         doNothing().when(orderDao).updateState(STATE_WAIT,orderID);
 
         mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
         verify(orderService, times(1)).confirmOrder(orderID);
-        //verify(orderDao).updateState(STATE_WAIT,mockOrder.getOrderID());
     }
-
     @Test
-    public void testPassOrderWithInvalidOrderID() throws Exception {
+    public void testPassOrderWithNotFoundID() throws Exception {
         int orderID = -1;
-        when(orderDao.findByOrderID(orderID)).thenReturn(null);
+        doThrow(EmptyResultDataAccessException.class).when(orderService).confirmOrder(orderID);
 
-        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID))));
-        assertTrue(exception.getRootCause() instanceof  RuntimeException);
-
+        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("false"));
+        verify(orderService, times(1)).confirmOrder(orderID);
     }
-
+    @Test
+    public void testPassOrderWithNegativeID() throws Exception {
+        int orderID = -1;
+        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isBadRequest());
+    }
     @Test
     public void testPassOrderWithStringID() throws Exception {
         mockMvc.perform(post("/passOrder.do").param("orderID", "nct127"))
                 .andExpect(status().isBadRequest());
     }
+    @Test
+    public void testPassOrderWithEmptyParam() throws Exception {
+        mockMvc.perform(post("/passOrder.do"))
+                .andExpect(status().isBadRequest());
+    }
+
 
     @Test
     public void testRejectOrderWithValidID() throws Exception {

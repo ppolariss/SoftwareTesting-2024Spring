@@ -551,7 +551,8 @@ public class OrderControllerTests {
         int orderID = 1;
         doNothing().when(orderService).delOrder(orderID);
         mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
         verify(orderService).delOrder(orderID);
     }
     @Test
@@ -561,7 +562,7 @@ public class OrderControllerTests {
         doThrow(EmptyResultDataAccessException.class).when(orderService).delOrder(orderID);
         mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
                 .andExpect(status().isNotFound())
-                .andExpect(content().string("true"));
+                .andExpect(content().string("false"));
         verify(orderService).delOrder(orderID);
     }
     @Test
