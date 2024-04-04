@@ -356,24 +356,31 @@ public class OrderControllerTests {
         mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID)))
                 .andExpect(status().isOk());
         verify(orderService, times(1)).finishOrder(orderID);
-        //verify(orderDao).updateState(STATE_FINISH,mockOrder.getOrderID());
     }
+    @Test
+    public void testFinishOrderWithNotFoundID() throws Exception {
+        // TODO：这个找不到不会异常？
+        int orderID = 127;
 
+        mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isNotFound());
+    }
     @Test
     public void testFinishOrderWithInvalidOrderID() throws Exception {
-        int orderID = -1;
-        when(orderDao.findByOrderID(orderID)).thenReturn(null);
-
-        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID))));
-        assertTrue(exception.getRootCause() instanceof  RuntimeException);
-
+        mockMvc.perform(post("/finishOrder.do").param("orderID","-1"))
+                .andExpect(status().isBadRequest());
     }
-
     @Test
     public void testFinishOrderWithStringID() throws Exception {
         mockMvc.perform(post("/finishOrder.do").param("orderID", "nct127"))
                 .andExpect(status().isBadRequest());
     }
+    @Test
+    public void testFinishOrderWithEmptyParam() throws Exception {
+        mockMvc.perform(post("/finishOrder.do"))
+                .andExpect(status().isBadRequest());
+    }
+
 
     @Test
     public void testModifyOrderWithValidID() throws Exception {
