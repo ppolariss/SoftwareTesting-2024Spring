@@ -300,7 +300,7 @@ public class AdminUserControllerTests {
     public void testUserEditWithNotExistingId() throws Exception {
         int notExistingId = 999;
 
-        when(userService.findById(notExistingId)).thenThrow(EntityNotFoundException.class);
+        when(userService.findById(notExistingId)).thenReturn(null);
 
         mockMvc.perform(get("/user_edit").param("id", String.valueOf(notExistingId)))
                 .andExpect(status().isNotFound())
@@ -387,7 +387,7 @@ public class AdminUserControllerTests {
         String email = "test@example.com";
         String phone = "1234567890";
 
-        when(userService.findByUserID(anyString())).thenThrow(EntityExistsException.class);
+        when(userService.findByUserID(anyString())).thenReturn(null);
 
         mockMvc.perform(post("/modifyUser.do")
                         .param("userID", userID)

@@ -25,8 +25,11 @@ public class NotFoundTests {
         try {
             User userExists = userService.checkLogin("test", "test");
             User userNotExists = userService.checkLogin("not exist", "wrong pwd");
+
+            User userById = userService.findById(999);
             System.out.println(userExists);
             System.out.println(userNotExists);
+            System.out.println(userById);
         } catch (Exception e) {
             System.out.println("Exception here");
             System.out.println(e.getMessage());
