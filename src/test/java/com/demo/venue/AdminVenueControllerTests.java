@@ -348,7 +348,7 @@ public class AdminVenueControllerTests {
                 .thenReturn(1);
         when(venueService.findByVenueName("conflict"))
                 .thenReturn(new Venue(1, "conflict", "descriptions", 1,
-                        "", "addresses", "open_time", "close_time"));
+                        "", "addresses", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME));
 
         when(venueService.create(any(Venue.class)))
                 .thenReturn(1);
