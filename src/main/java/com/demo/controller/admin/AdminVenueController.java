@@ -37,7 +37,7 @@ public class AdminVenueController {
     @RequestMapping("/venue_edit")
     public String editVenue(Model model, int venueID) {
         Venue venue = venueService.findByVenueID(venueID);
-        System.out.println(venue);
+//        System.out.println(venue);
         model.addAttribute("venue", venue);
         return "/admin/venue_edit";
     }
@@ -51,6 +51,8 @@ public class AdminVenueController {
     @ResponseBody
     public List<Venue> getVenueList(@RequestParam(value = "page", defaultValue = "1") int page) {
         Pageable pageable = PageRequest.of(page - 1, 10, Sort.by("venueID").ascending());
+//        System.out.println(venueService.findAll(pageable).getTotalPages());
+//        System.out.println(venueService.findAll(pageable).getContent());
         return venueService.findAll(pageable).getContent();
 
     }
@@ -117,3 +119,11 @@ public class AdminVenueController {
     }
 
 }
+
+
+
+
+
+
+
+
