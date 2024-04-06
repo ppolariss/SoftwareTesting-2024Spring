@@ -169,34 +169,7 @@ public class VenueControllerTests {
 
     //  venue_list  /venue_list
     @Test
-    public void testVenueListWithSuccess() throws Exception {
-        Pageable pageable = PageRequest.of(0, 5, Sort.by("venueID").ascending());
-        Venue venue = new Venue(1, "venue_name", "description", 1, "picture", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME);
-        when(venueService.findAll(pageable))
-                .thenReturn(new PageImpl<>(Collections.singletonList(venue), pageable, 1));
-        mockMvc.perform(get("/venue_list"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("venue_list"))
-                .andExpect(model().attribute("venue_list",
-                        new PageImpl<>(Collections.singletonList(venue)).getContent()))
-                .andExpect(model().attribute("total", 1));
-    }
-
-    @Test
-    public void testVenueListWithEmptySuccess() throws Exception {
-        Pageable pageable = PageRequest.of(0, 5, Sort.by("venueID").ascending());
-        when(venueService.findAll(pageable))
-                .thenReturn(new PageImpl<>(Collections.emptyList(), pageable, 0));
-
-        mockMvc.perform(get("/venue_list"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("venue_list"))
-                .andExpect(model().attribute("venue_list", Collections.emptyList()))
-                .andExpect(model().attribute("total", 0));
-    }
-
-    @Test
-    public void testVenueListWithOverflowVenues() throws Exception {
+    public void testVenueListWithSuccess() {
         List<Venue> venues = IntStream.range(0, 15)
                 .mapToObj(i -> new Venue(i + 1, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME))
                 .collect(Collectors.toList());
@@ -215,4 +188,18 @@ public class VenueControllerTests {
             fail();
         }
     }
+
+    @Test
+    public void testVenueListWithEmptySuccess() throws Exception {
+        Pageable pageable = PageRequest.of(0, 5, Sort.by("venueID").ascending());
+        when(venueService.findAll(pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList(), pageable, 0));
+
+        mockMvc.perform(get("/venue_list"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("venue_list"))
+                .andExpect(model().attribute("venue_list", Collections.emptyList()))
+                .andExpect(model().attribute("total", 0));
+    }
+
 }

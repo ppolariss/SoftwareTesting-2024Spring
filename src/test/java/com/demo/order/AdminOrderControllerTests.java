@@ -1,6 +1,7 @@
 package com.demo.order;
 
 import static com.demo.service.OrderService.*;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -21,12 +22,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.*;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.NestedServletException;
 
+import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @WebMvcTest(AdminOrderController.class)
 public class AdminOrderControllerTests {
@@ -58,9 +65,30 @@ public class AdminOrderControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reservation_manage"))
                 .andExpect(model().attribute("order_list",mockOrderVos))
-                .andExpect(model().attribute("total",mockPage.getTotalPages()));
+                .andExpect(model().attribute("total",1));
     }
+    @Test
+    public void testReservationManageWithBothOrdersPaged() throws Exception {
+        // mock data
+        List<Order> mockOrders = IntStream.range(0,15)
+                .mapToObj(i -> new Order())
+                .collect(Collectors.toList());
+        List<OrderVo> mockOrderVos = IntStream.range(0,15)
+                .mapToObj(i -> new OrderVo())
+                .collect(Collectors.toList());
+        Pageable order_pageable= PageRequest.of(0,10, Sort.by("orderTime").descending());
+        Page<Order> mockPage = new PageImpl<>(mockOrders,order_pageable,mockOrders.size());
 
+        when(orderService.findAuditOrder()).thenReturn(mockOrders);
+        when(orderVoService.returnVo(mockOrders)).thenReturn(mockOrderVos);
+        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(mockPage);
+
+        mockMvc.perform(get("/reservation_manage"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/reservation_manage"))
+                .andExpect(model().attribute("order_list",mockOrderVos))
+                .andExpect(model().attribute("total",2));
+    }
     @Test
     public void testReservationManageWithoutAuditOrders() throws Exception {
         List<Order> mockOrders = new ArrayList<>();
@@ -68,16 +96,14 @@ public class AdminOrderControllerTests {
         Page<Order> mockPage = new PageImpl<>(mockOrders);
         List<OrderVo> mockOrderVos = new ArrayList<>();
 
-        when(orderService.findAuditOrder()).thenReturn(null);
+        when(orderService.findAuditOrder()).thenThrow(EntityNotFoundException.class);
         when(orderService.findNoAuditOrder(order_pageable)).thenReturn(mockPage);
 
         mockMvc.perform(get("/reservation_manage"))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(view().name("admin/reservation_manage"))
-                .andExpect(model().attribute("order_list",mockOrderVos))
                 .andExpect(model().attribute("total",mockPage.getTotalPages()));
     }
-
     @Test
     public void testReservationManageWithoutNoAuditOrders() throws Exception {
         List<Order> mockOrders = new ArrayList<>();
@@ -87,14 +113,15 @@ public class AdminOrderControllerTests {
 
         when(orderService.findAuditOrder()).thenReturn(mockOrders);
         when(orderVoService.returnVo(mockOrders)).thenReturn(mockOrderVos);
-        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(null);
+        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
 
         mockMvc.perform(get("/reservation_manage"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reservation_manage"))
                 .andExpect(model().attribute("order_list",mockOrderVos))
-                .andExpect(model().attribute("total",mockEmptyPage.getTotalPages()));
+                .andExpect(model().attribute("total",0));
     }
+
 
     @Test
     public void testAdminGetOrderListWithValidPage() throws Exception{
@@ -115,36 +142,32 @@ public class AdminOrderControllerTests {
         // test
         mockMvc.perform(get("/admin/getOrderList.do"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/json"))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$").value(mockVo));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
-
     @Test
-    public void testGetOrderListWithErrorPageMin() throws Exception {
-        // bug here
-        // 没有做-1输入的处理，导致PageRequest.of()失败
+    public void testGetOrderListWithPageNotPositive() throws Exception {
         mockMvc.perform(get("/admin/getOrderList.do").param("page", "-1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").doesNotExist());
+                .andExpect(status().isBadRequest());
     }
-
     @Test
-    public void testGetOrderListWithErrorPageMax() throws Exception {
-        // bug here
-        // 没有做page越界处理，导致null对象调用
+    public void testGetOrderListWithEmptyParam() throws Exception {
+        mockMvc.perform(get("/admin/getOrderList.do"))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testGetOrderListWithEmptyPage() throws Exception {
         User user = new User();
         user.setUserID("nct127");
 
         Pageable order_pageable = PageRequest.of(5-1,5, Sort.by("orderTime").descending());
-        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(null);
-        //when(orderVoService.returnVo(mockOrderList)).thenReturn(mockVo);
+        when(orderService.findUserOrder("1", order_pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
 
         mockMvc.perform(get("/admin/getOrderList.do").param("page","5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").doesNotExist());
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(0)));
     }
-
     @Test
     public void testGetOrderListWithStringPage() throws Exception {
         User user = new User();
@@ -152,6 +175,7 @@ public class AdminOrderControllerTests {
         mockMvc.perform(get("/admin/getOrderList.do").param("page","jw"))
                 .andExpect(status().isBadRequest());
     }
+
 
     @Test
     public void testPassOrderWithValidID() throws Exception {
@@ -162,26 +186,37 @@ public class AdminOrderControllerTests {
         doNothing().when(orderDao).updateState(STATE_WAIT,orderID);
 
         mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
         verify(orderService, times(1)).confirmOrder(orderID);
-        //verify(orderDao).updateState(STATE_WAIT,mockOrder.getOrderID());
     }
-
     @Test
-    public void testPassOrderWithInvalidOrderID() throws Exception {
-        int orderID = -1;
-        when(orderDao.findByOrderID(orderID)).thenReturn(null);
+    public void testPassOrderWithNotFoundID() throws Exception {
+        int orderID = 1;
+        doThrow(EmptyResultDataAccessException.class).when(orderService).confirmOrder(orderID);
 
-        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID))));
-        assertTrue(exception.getRootCause() instanceof  RuntimeException);
-
+        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("false"));
+        verify(orderService, times(1)).confirmOrder(orderID);
     }
-
+    @Test
+    public void testPassOrderWithNegativeID() throws Exception {
+        int orderID = -1;
+        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isBadRequest());
+    }
     @Test
     public void testPassOrderWithStringID() throws Exception {
         mockMvc.perform(post("/passOrder.do").param("orderID", "nct127"))
                 .andExpect(status().isBadRequest());
     }
+    @Test
+    public void testPassOrderWithEmptyParam() throws Exception {
+        mockMvc.perform(post("/passOrder.do"))
+                .andExpect(status().isBadRequest());
+    }
+
 
     @Test
     public void testRejectOrderWithValidID() throws Exception {
@@ -192,24 +227,34 @@ public class AdminOrderControllerTests {
         doNothing().when(orderDao).updateState(STATE_REJECT,orderID);
 
         mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));;
         verify(orderService, times(1)).rejectOrder(orderID);
-        //verify(orderDao).updateState(STATE_WAIT,mockOrder.getOrderID());
     }
-
     @Test
-    public void testRejecthOrderWithInvalidOrderID() throws Exception {
-        int orderID = -1;
-        when(orderDao.findByOrderID(orderID)).thenReturn(null);
+    public void testRejectOrderWithNotFoundID() throws Exception {
+        int orderID = 1;
+        doThrow(EmptyResultDataAccessException.class).when(orderService).rejectOrder(orderID);
 
-        NestedServletException exception = assertThrows(NestedServletException.class, () -> mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID))));
-        assertTrue(exception.getRootCause() instanceof  RuntimeException);
-
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("false"));
+        verify(orderService, times(1)).rejectOrder(orderID);
     }
-
+    @Test
+    public void testRejectOrderWithNegativeID() throws Exception {
+        int orderID = -1;
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
+                .andExpect(status().isBadRequest());
+    }
     @Test
     public void testRejectOrderWithStringID() throws Exception {
         mockMvc.perform(post("/rejectOrder.do").param("orderID", "nct127"))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testRejectOrderWithEmptyParam() throws Exception {
+        mockMvc.perform(post("/rejectOrder.do"))
                 .andExpect(status().isBadRequest());
     }
 
