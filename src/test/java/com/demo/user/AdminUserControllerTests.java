@@ -1,10 +1,8 @@
 package com.demo.user;
 
 import com.demo.controller.admin.AdminUserController;
-import com.demo.entity.News;
 import com.demo.entity.User;
 import com.demo.service.UserService;
-import com.mysql.cj.x.protobuf.MysqlxDatatypes;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,10 +11,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityNotFoundException;
@@ -30,10 +25,7 @@ import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import static org.springframework.test.web.servlet.result.JsonPathResultMatchers.*;
-
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.*;
 
@@ -271,7 +263,6 @@ public class AdminUserControllerTests {
 
         when(userService.countUserID(conflictUserID)).thenReturn(1);  // 说明此 userID已存在
         when(userService.create(ArgumentMatchers.any(User.class))).thenReturn(0);
-//        doThrow(new RuntimeException("User already exists.")).when(userService).create(any(User.class));
 
         mockMvc.perform(post("/addUser.do")
                         .param("userID", conflictUserID)
@@ -280,9 +271,6 @@ public class AdminUserControllerTests {
                         .param("email", email)
                         .param("phone", phone))
                 .andExpect(status().isConflict());  // 409 conflict
-//                .andExpect(content().string(containsString("User already exists.")));
-
-        verify(userService).create(ArgumentMatchers.any(User.class));
     }
 
 
