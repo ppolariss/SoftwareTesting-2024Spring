@@ -332,7 +332,7 @@ public class UserControllerTests {
 //        PowerMockito.mockStatic(FileUtil.class);
 
         when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
-        when(FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+//        when(FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
                         .file(picture)
