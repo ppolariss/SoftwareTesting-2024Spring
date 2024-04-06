@@ -15,6 +15,11 @@ import com.demo.utils.FileUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -27,8 +32,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.web.multipart.MultipartFile;
 
 @WebMvcTest(UserController.class)
-//@RunWith(PowerMockRunner.class)
-//@PrepareForTest(FileUtil.class)
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(FileUtil.class)
 public class UserControllerTests {
 
     @Autowired
@@ -301,8 +306,9 @@ public class UserControllerTests {
         // TODO: 模拟静态方法行为
 
         // Mock Static method
-//        PowerMockito.mockStatic(FileUtil.class);
-//        when(FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+//        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
+        PowerMockito.mockStatic(FileUtil.class);
+        when(FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
 
         when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
 //        when(fileUtil.saveUserFile(any(MultipartFile.class))).thenReturn("image.jpg");

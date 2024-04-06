@@ -49,7 +49,6 @@ public class UserController {
             }
         }
         return "false";
-
     }
 
     @PostMapping("/register.do")
