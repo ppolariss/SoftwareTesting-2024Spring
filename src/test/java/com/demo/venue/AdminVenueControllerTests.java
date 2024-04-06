@@ -247,8 +247,8 @@ public class AdminVenueControllerTests {
                         .param("address", "address")
                         .param("description", "description")
                         .param("price", "1")
-                        .param("open_time", "2006-01-02 15:04:05")
-                        .param("close_time", "2024-04-02 23:20:05"))
+                        .param("open_time", CORRECT_OPEN_TIME)
+                        .param("close_time", CORRECT_CLOSE_TIME))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_manage"));
         verify(venueService).create(any(Venue.class));
@@ -256,7 +256,7 @@ public class AdminVenueControllerTests {
 
     @Test
     public void testAddVenueWithNoPicSuccess() throws Exception {
-        Venue venue = new Venue(0, "venue_name", "description", 1, "", "address", "2006-01-02 15:04:05", "2024-04-02 23:20:05");
+        Venue venue = new Venue(0, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME);
         when(venueService.create(venue))
                 .thenReturn(1);
 
@@ -266,8 +266,8 @@ public class AdminVenueControllerTests {
                         .param("address", "address")
                         .param("description", "description")
                         .param("price", "1")
-                        .param("open_time", "2006-01-02 15:04:05")
-                        .param("close_time", "2024-04-02 23:20:05"))
+                        .param("open_time", CORRECT_OPEN_TIME)
+                        .param("close_time", CORRECT_CLOSE_TIME))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_manage"));
         verify(venueService).create(venue);
@@ -284,8 +284,8 @@ public class AdminVenueControllerTests {
                         .param("address", "address")
                         .param("description", "description")
                         .param("price", "1")
-                        .param("open_time", "2006-01-02 15:04:05")
-                        .param("close_time", "2024-04-02 23:20:05"))
+                        .param("open_time", CORRECT_OPEN_TIME)
+                        .param("close_time", CORRECT_CLOSE_TIME))
                 .andExpect(request().attribute("message", "添加失败"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_add"));
@@ -310,8 +310,8 @@ public class AdminVenueControllerTests {
                         .param("address", "address")
                         .param("description", "description")
                         .param("price", "1.5")
-                        .param("open_time", "2006-01-02 15:04:05")
-                        .param("close_time", "2024-04-02 23:20:05"))
+                        .param("open_time", CORRECT_OPEN_TIME)
+                        .param("close_time", CORRECT_CLOSE_TIME))
                 .andExpect(status().isBadRequest());
     }
 
@@ -323,8 +323,8 @@ public class AdminVenueControllerTests {
                         .param("address", "address")
                         .param("description", "description")
                         .param("price", "-1")
-                        .param("open_time", "2006-01-02 15:04:05")
-                        .param("close_time", "2024-04-02 23:20:05"))
+                        .param("open_time", CORRECT_OPEN_TIME)
+                        .param("close_time", CORRECT_CLOSE_TIME))
                 .andExpect(status().isBadRequest());
     }
 
@@ -341,12 +341,15 @@ public class AdminVenueControllerTests {
                 .andExpect(status().isBadRequest());
     }
 
+//UUID.randomUUID().toString()
+//                .thenThrow(NonUniqueResultException.class);
     @Test
     public void testAddVenueWithConflict() throws Exception {
         when(venueService.countVenueName("conflict"))
                 .thenReturn(1);
         when(venueService.findByVenueName("conflict"))
-                .thenThrow(NonUniqueResultException.class);
+                .thenReturn(new Venue(1, "conflict", "descriptions", 1,
+                        "", "addresses", "open_time", "close_time"));
 
         when(venueService.create(any(Venue.class)))
                 .thenReturn(1);
@@ -357,12 +360,12 @@ public class AdminVenueControllerTests {
 
         MockHttpServletRequestBuilder request = MockMvcRequestBuilders.multipart("/addVenue.do")
                 .file(imageFile)
-                .param("venueName", UUID.randomUUID().toString())
+                .param("venueName", "conflict")
                 .param("address", "address")
                 .param("description", "description")
                 .param("price", "1")
-                .param("open_time", "2006-01-02 15:04:05")
-                .param("close_time", "2024-04-02 23:20:05");
+                .param("open_time", CORRECT_OPEN_TIME)
+                .param("close_time", CORRECT_CLOSE_TIME);
 
         mockMvc.perform(request)
                 .andExpect(status().is3xxRedirection())
