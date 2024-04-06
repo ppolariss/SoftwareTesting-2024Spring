@@ -289,7 +289,7 @@ public class AdminVenueControllerTests {
                         .param("price", "1")
                         .param("open_time", CORRECT_OPEN_TIME)
                         .param("close_time", CORRECT_CLOSE_TIME))
-                .andExpect(request().attribute("message", "添加失败"))
+                .andExpect(request().attribute("message", "添加失败！"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_add"));
         verify(venueService).create(any(Venue.class));
@@ -301,6 +301,7 @@ public class AdminVenueControllerTests {
             mockMvc.perform(post("/addVenue.do"))
                     .andExpect(status().isBadRequest());
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
     }
@@ -566,6 +567,7 @@ public class AdminVenueControllerTests {
             mockMvc.perform(post("/modifyVenue.do"))
                     .andExpect(status().isBadRequest());
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
     }
