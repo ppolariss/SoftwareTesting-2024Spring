@@ -225,7 +225,7 @@ public class OrderControllerTests {
     @Test
     public void testGetOrderListWithEmptyPage() throws Exception {
         Pageable order_pageable= PageRequest.of(0,5, Sort.by("time").descending());
-        when(orderService.findUserOrder("1", order_pageable))
+        when(orderService.findUserOrder(any(),any()))
                 .thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
 
         User user = new User();
