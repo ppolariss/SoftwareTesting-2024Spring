@@ -1,6 +1,5 @@
 package com.demo.user;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.*;
@@ -15,10 +14,9 @@ import com.demo.utils.FileUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import org.junit.jupiter.api.extension.ExtendWith;
-//import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
-import org.mockito.InjectMocks;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -28,13 +26,8 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.web.multipart.MultipartFile;
 
 @WebMvcTest(UserController.class)
-//@RunWith(PowerMockRunner.class)
-//@PrepareForTest(FileUtil.class)
-//@ExtendWith(PowerMockExtension.class) // 使用 PowerMockito 扩展
-//@PrepareForTest(FileUtil.class) // 准备对 FileUtil类 进行测试
 public class UserControllerTests {
 
     @Autowired
@@ -43,14 +36,19 @@ public class UserControllerTests {
     @MockBean
     private UserService userService;
 
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
 
-    @InjectMocks
-    private FileUtil fileUtil;
-
+    @BeforeEach
+    public void setUp() {
+        request = new MockHttpServletRequest();
+        response = new MockHttpServletResponse();
+    }
 
     /*
-    * 展示注册界面
-    * */
+     * 展示注册界面
+     * */
+
     @Test
     public void testSignUpView() throws Exception {
         mockMvc.perform(get("/signup"))
@@ -89,15 +87,6 @@ public class UserControllerTests {
         verify(userService).create(any(User.class));
     }
 
-    // BUG: 没有检查参数为空的情况
-    @Test
-    public void testRegisterWithEmptyParam() throws Exception {
-        mockMvc.perform(post("/register.do"))
-                .andExpect(status().isBadRequest());
-
-        verify(userService, never()).create(ArgumentMatchers.any(User.class));
-    }
-
     // BUG: 没有检查邮箱格式不合法的情况
     @Test
     public void testRegisterWithInvalidEmailFormat() throws Exception {
@@ -120,6 +109,15 @@ public class UserControllerTests {
                         .param("email", "test@example.com")
                         .param("phone", "invalid_phone_number"))  // invalid format
                 .andExpect(status().isBadRequest());
+    }
+
+    // BUG: 没有检查参数为空的情况
+    @Test
+    public void testRegisterWithEmptyParam() throws Exception {
+        mockMvc.perform(post("/register.do"))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).create(ArgumentMatchers.any(User.class));
     }
 
     // BUG: 没有检查用户已存在的情况（即 userID重复）
@@ -159,8 +157,8 @@ public class UserControllerTests {
 
 
     /*
-    * 用户登录
-    * */
+     * 用户登录
+     * */
 
     @Test
     public void testLoginWithValidUser() throws Exception {
@@ -240,7 +238,7 @@ public class UserControllerTests {
         verify(userService).checkLogin(userID, password);
     }
 
-    // BUG: 没有检查参数为 null的情况
+    // BUG: 没有检查参数为空的情况
     @Test
     public void testLoginWithEmptyParam() throws Exception {
         mockMvc.perform(post("/loginCheck.do"))
@@ -251,15 +249,6 @@ public class UserControllerTests {
     /*
      * 账号登出
      * */
-
-    private MockHttpServletRequest request;
-    private MockHttpServletResponse response;
-
-    @BeforeEach
-    public void setUp() {
-        request = new MockHttpServletRequest();
-        response = new MockHttpServletResponse();
-    }
 
     @Test
     public void testLogout() throws Exception {
@@ -273,6 +262,13 @@ public class UserControllerTests {
     }
 
     @Test
+    public void testLogoutWithoutLogin() throws Exception {
+        mockMvc.perform(get("/logout.do"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/index"));
+    }
+
+    @Test
     public void testQuit() throws Exception {
         request.getSession().setAttribute("admin", new User());
 
@@ -283,11 +279,18 @@ public class UserControllerTests {
         assertNull(request.getSession().getAttribute("admin"));
     }
 
-    // TODO: 是否需要考虑在没有登录的情况下，就登出的情况？无效等价类应该如何设置？
+    @Test
+    public void testQuitWithoutLogin() throws Exception {
+        mockMvc.perform(get("/quit.do"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/index"));
+//                .andExpect(status().isUnauthorized());
+    }
+
 
     /*
-    * 展示用户信息
-    * */
+     * 展示用户信息
+     * */
 
     @Test
     public void testUserInfo() throws Exception {
@@ -319,16 +322,13 @@ public class UserControllerTests {
         User userBeforeUpdate = new User();
         userBeforeUpdate.setUserID(userID);
 
-        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, "image.jpg");
+        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
 
-        // TODO: 模拟静态方法行为
-
-        // Mock Static method
-//        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
-//        PowerMockito.mockStatic(FileUtil.class);
+        // Mock Static Method
+        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
+        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
 
         when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
-//        when(FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
                         .file(picture)
@@ -342,26 +342,122 @@ public class UserControllerTests {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("user_info"));
 
+        // 检查 session中的 user信息是否被成功更新
         assertEquals(userAfterUpdate, request.getSession().getAttribute("user"));
 
         verify(userService).findByUserID(userID);
         verify(userService).updateUser(userAfterUpdate);
+        mockedStatic.verify(() -> FileUtil.saveUserFile(picture));
     }
 
     @Test
-    public void testUpdateUserWithIncompleteInfo() throws Exception {
+    public void testUpdateUserWithNullNewPassword() throws Exception {
 
-        String userID = null; // userID cannot be null
+        String userID = "1";
         String userName = "test";
-        String password = "password123";
+        String password = "password123";  // old password
         String email = "test@example.com";
         String phone = "1234567890";
         MockMultipartFile picture = new MockMultipartFile("picture", "image.jpg", "image/jpeg", "Some image content here".getBytes());
 
-        when(userService.findByUserID(anyString())).thenReturn(null);
+        User userBeforeUpdate = new User();
+        userBeforeUpdate.setUserID(userID);
+        userBeforeUpdate.setPassword(password);
+
+        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
+
+        // Mock Static Method
+        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
+        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+
+        when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
+                                .file(picture)
+                                .param("userName", userName)
+                                .param("userID", userID)
+//                        .param("passwordNew", password)  // new password is null so will not be updated
+                                .param("email", email)
+                                .param("phone", phone)
+                                .session((MockHttpSession) request.getSession())
+                )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("user_info"));
+
+        // 检查 session中的 user信息是否被成功更新
+        assertEquals(userAfterUpdate, request.getSession().getAttribute("user"));
+
+        verify(userService).findByUserID(userID);
+        verify(userService).updateUser(userAfterUpdate);
+        mockedStatic.verify(() -> FileUtil.saveUserFile(picture));
+    }
+
+    @Test
+    public void testUpdateUserWithEmptyStringNewPassword() throws Exception {
+
+        String userID = "1";
+        String userName = "test";
+        String password = "password123";  // old password
+        String email = "test@example.com";
+        String phone = "1234567890";
+        MockMultipartFile picture = new MockMultipartFile("picture", "image.jpg", "image/jpeg", "Some image content here".getBytes());
+
+        User userBeforeUpdate = new User();
+        userBeforeUpdate.setUserID(userID);
+        userBeforeUpdate.setPassword(password);
+
+        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
+
+        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
+        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+
+        when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
                         .file(picture)
+                        .param("userName", userName)
+                        .param("userID", userID)
+                        .param("passwordNew", "")  // new password is empty string so will not be updated
+                        .param("email", email)
+                        .param("phone", phone)
+                        .session((MockHttpSession) request.getSession())
+                )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("user_info"));
+
+        // 检查 session中的 user信息是否被成功更新
+        assertEquals(userAfterUpdate, request.getSession().getAttribute("user"));
+
+        verify(userService).findByUserID(userID);
+        verify(userService).updateUser(userAfterUpdate);
+        mockedStatic.verify(() -> FileUtil.saveUserFile(picture));
+    }
+
+    @Test
+    public void testUpdateUserWithEmptyStringPicture() throws Exception {
+
+        String userID = "1";
+        String userName = "test";
+        String password = "password123";
+        String email = "test@example.com";
+        String phone = "1234567890";
+        String originalPictureName = "origin.jpg";
+        // new picture's original name is empty string, so will not be updated
+        MockMultipartFile picture = new MockMultipartFile("picture", "", "image/jpeg", "Some image content here".getBytes());
+
+        User userBeforeUpdate = new User();
+        userBeforeUpdate.setUserID(userID);
+        userBeforeUpdate.setPicture(originalPictureName);
+
+        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, originalPictureName);
+
+        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
+        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+
+        when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
+                        .file(picture)   // new picture's original name is empty string so will not be updated
                         .param("userName", userName)
                         .param("userID", userID)
                         .param("passwordNew", password)
@@ -369,22 +465,29 @@ public class UserControllerTests {
                         .param("phone", phone)
                         .session((MockHttpSession) request.getSession())
                 )
-                .andExpect(status().isBadRequest());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("user_info"));
+
+        // 检查 session中的 user信息是否被成功更新
+        assertEquals(userAfterUpdate, request.getSession().getAttribute("user"));
 
         verify(userService).findByUserID(userID);
+        verify(userService).updateUser(userAfterUpdate);
+        mockedStatic.verify(never(), () -> FileUtil.saveUserFile(picture));  // method will not be invoked
     }
 
+    // BUG: 没有检查用户不存在的情况
     @Test
-    public void testUpdateUserWithNotExistingUser() throws Exception {
+    public void testUpdateUserWithWithNotExistingUser() throws Exception {
 
-        String userID = "1";
+        String userID = "not exists";  // not exists
         String userName = "test";
         String password = "password123";
         String email = "test@example.com";
         String phone = "1234567890";
         MockMultipartFile picture = new MockMultipartFile("picture", "image.jpg", "image/jpeg", "Some image content here".getBytes());
 
-        when(userService.findByUserID(anyString())).thenReturn(null);
+        when(userService.findByUserID(userID)).thenReturn(null);  // user not exists
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
                         .file(picture)
@@ -400,10 +503,17 @@ public class UserControllerTests {
         verify(userService).findByUserID(userID);
     }
 
+    // BUG: 没有检查参数为空的情况
+    @Test
+    public void testUpdateUserWithEmptyParam() throws Exception {
+        mockMvc.perform(post("/updateUser.do"))
+                .andExpect(status().isBadRequest());
+    }
+
 
     /*
-    * 检查密码
-    * */
+     * 检查密码
+     * */
 
     @Test
     public void testCheckPasswordWithCorrectPassword() throws Exception {
@@ -418,8 +528,8 @@ public class UserControllerTests {
         when(userService.findByUserID(anyString())).thenReturn(user);
 
         mockMvc.perform(get("/checkPassword.do")
-                .param("userID", userID)
-                .param("password", password))
+                        .param("userID", userID)
+                        .param("password", password))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
 
