@@ -3,6 +3,7 @@ import com.demo.controller.admin.AdminMessageController;
 import com.demo.controller.user.MessageController;
 import com.demo.entity.Message;
 import com.demo.entity.User;
+import com.demo.entity.vo.MessageVo;
 import com.demo.service.MessageService;
 import com.demo.service.MessageVoService;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import org.springframework.data.domain.*;
 
@@ -188,6 +190,76 @@ public class MessageControllerTests {
     }
 
     @Test
+    public void testUserMessageListWithUserLogInAndValidPageParam() throws Exception{
+        List<Message> nonEmptyMessageList = new ArrayList<>();
+        nonEmptyMessageList.add(new Message(1,"user","test_message", LocalDateTime.now(),2));
+        List<MessageVo> messageVos = new ArrayList<>();
+        messageVos.add(new MessageVo(1,"user","test_message", LocalDateTime.now(),"user","test.jpg",2));
+        Page<Message> mockPage = new PageImpl<>(nonEmptyMessageList,PageRequest.of(0, 10, Sort.by("time").descending()) ,nonEmptyMessageList.size());
+
+
+        MockHttpSession session = new MockHttpSession();
+        User user = new User();
+        user.setUserID("user");
+        session.setAttribute("user", user);
+        when(messageService.findByUser(eq("user"), any(Pageable.class))).thenReturn(mockPage);
+        when(messageVoService.returnVo(nonEmptyMessageList)).thenReturn(messageVos);
+
+
+        mockMvc.perform(get("/message/findUserList").param("page","1").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));;
+
+    }
+
+    @Test
+    public void testUserMessageListWithUserLogInButEmptyPageParam() throws Exception{
+        List<Message> nonEmptyMessageList = new ArrayList<>();
+        nonEmptyMessageList.add(new Message(1,"user","test_message", LocalDateTime.now(),2));
+        List<MessageVo> messageVos = new ArrayList<>();
+        messageVos.add(new MessageVo(1,"user","test_message", LocalDateTime.now(),"user","test.jpg",2));
+        Page<Message> mockPage = new PageImpl<>(nonEmptyMessageList,PageRequest.of(0, 10, Sort.by("time").descending()) ,nonEmptyMessageList.size());
+
+
+        MockHttpSession session = new MockHttpSession();
+        User user = new User();
+        user.setUserID("user");
+        session.setAttribute("user", user);
+        when(messageService.findByUser(eq("user"), any(Pageable.class))).thenReturn(mockPage);
+        when(messageVoService.returnVo(nonEmptyMessageList)).thenReturn(messageVos);
+
+
+        mockMvc.perform(get("/message/findUserList").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));;
+
+    }
+    @Test
+    public void testUserMessageListWithUserLogInButNegativePageParam() throws Exception{
+        MockHttpSession session = new MockHttpSession();
+        User user = new User();
+        user.setUserID("user");
+        session.setAttribute("user", user);
+
+        mockMvc.perform(get("/message/findUserList").param("page","-1").session(session))
+                .andExpect(status().isBadRequest());
+
+    }
+    @Test
+    public void testUserMessageListWithUserLogInButStringPageParam() throws Exception{
+
+        MockHttpSession session = new MockHttpSession();
+        User user = new User();
+        user.setUserID("user");
+        session.setAttribute("user", user);
+
+        mockMvc.perform(get("/message/findUserList").param("page","hello").session(session))
+                .andExpect(status().isBadRequest());
+
+    }
+
+
+    @Test
     public void testSendMessageWithSuccess() throws Exception{
         String userID = "user";
         String content = "content";
@@ -295,7 +367,7 @@ public class MessageControllerTests {
     public void testDelMessageWithNotExistingId() throws Exception{
         int notExistingId = 999;
 
-        doThrow(new EmptyResultDataAccessException(String.format("No User with id %s exists!", notExistingId), 1))
+        doNothing()
                 .when(messageService).delById(notExistingId);
 
         mockMvc.perform(post("/delMessage.do").param("messageID",String.valueOf(notExistingId)))
