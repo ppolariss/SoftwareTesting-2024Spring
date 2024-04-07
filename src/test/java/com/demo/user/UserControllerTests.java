@@ -36,6 +36,15 @@ public class UserControllerTests {
     @MockBean
     private UserService userService;
 
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
+
+    @BeforeEach
+    public void setUp() {
+        request = new MockHttpServletRequest();
+        response = new MockHttpServletResponse();
+    }
+
     /*
      * 展示注册界面
      * */
@@ -240,15 +249,6 @@ public class UserControllerTests {
     /*
      * 账号登出
      * */
-
-    private MockHttpServletRequest request;
-    private MockHttpServletResponse response;
-
-    @BeforeEach
-    public void setUp() {
-        request = new MockHttpServletRequest();
-        response = new MockHttpServletResponse();
-    }
 
     @Test
     public void testLogout() throws Exception {

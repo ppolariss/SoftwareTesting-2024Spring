@@ -13,8 +13,6 @@ import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import javax.persistence.EntityExistsException;
-import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,7 +24,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.*;
 
 @WebMvcTest(AdminUserController.class)
@@ -37,17 +34,6 @@ public class AdminUserControllerTests {
 
     @MockBean
     private UserService userService;
-
-    @Test
-    public void testNull() {
-        Pageable user_pageable = PageRequest.of(999999999, 10, Sort.by("id").ascending());
-
-        Page<User> temp1 = userService.findByUserID(user_pageable);
-        assertNull(temp1);
-
-        User temp2 = userService.findByUserID("-1");
-        assertNull(temp2);
-    }
 
     /*
      * 展示管理用户界面
