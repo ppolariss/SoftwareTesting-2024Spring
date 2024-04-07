@@ -409,7 +409,8 @@ public class AdminUserControllerTests {
                 .andExpect(status().isBadRequest());
     }
 
-    // 这里是用 string型的 userID来查找用户，没有对负数和非数字参数的检查
+    // 这里是用 string型的 userID来查找用户，所以没有对负数和非数字参数的检查
+    // 不用检查 userID冲突的情况，因为函数中并不会修改 userID
 
 
     /*
