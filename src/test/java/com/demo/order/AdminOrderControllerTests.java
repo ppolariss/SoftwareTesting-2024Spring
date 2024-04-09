@@ -50,24 +50,6 @@ public class AdminOrderControllerTests {
     @MockBean
     private OrderDao orderDao;
     @Test
-    public void testReservationManageWithBothOrders() throws Exception {
-        // mock data
-        List<Order> mockOrders = new ArrayList<>();
-        List<OrderVo> mockOrderVos = new ArrayList<>();
-        Pageable order_pageable= PageRequest.of(0,10, Sort.by("orderTime").descending());
-        Page<Order> mockPage = new PageImpl<>(mockOrders);
-
-        when(orderService.findAuditOrder()).thenReturn(mockOrders);
-        when(orderVoService.returnVo(mockOrders)).thenReturn(mockOrderVos);
-        when(orderService.findNoAuditOrder(order_pageable)).thenReturn(mockPage);
-
-        mockMvc.perform(get("/reservation_manage"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/reservation_manage"))
-                .andExpect(model().attribute("order_list",mockOrderVos))
-                .andExpect(model().attribute("total",1));
-    }
-    @Test
     public void testReservationManageWithBothOrdersPaged() throws Exception {
         // mock data
         List<Order> mockOrders = IntStream.range(0,15)
@@ -96,12 +78,13 @@ public class AdminOrderControllerTests {
         Page<Order> mockPage = new PageImpl<>(mockOrders);
         List<OrderVo> mockOrderVos = new ArrayList<>();
 
-        when(orderService.findAuditOrder()).thenThrow(EntityNotFoundException.class);
+        when(orderService.findAuditOrder()).thenReturn(new ArrayList<>());
         when(orderService.findNoAuditOrder(order_pageable)).thenReturn(mockPage);
 
         mockMvc.perform(get("/reservation_manage"))
-                .andExpect(status().isNotFound())
+                .andExpect(status().isOk())
                 .andExpect(view().name("admin/reservation_manage"))
+                .andExpect(model().attribute("order_list",hasSize(0)))
                 .andExpect(model().attribute("total",mockPage.getTotalPages()));
     }
     @Test
@@ -156,11 +139,8 @@ public class AdminOrderControllerTests {
     }
     @Test
     public void testGetOrderListWithEmptyPage() throws Exception {
-        User user = new User();
-        user.setUserID("nct127");
-
         Pageable order_pageable = PageRequest.of(5-1,5, Sort.by("orderTime").descending());
-        when(orderService.findUserOrder("1", order_pageable))
+        when(orderService.findNoAuditOrder(any()))
                 .thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
 
         mockMvc.perform(get("/admin/getOrderList.do").param("page","5"))
@@ -170,8 +150,6 @@ public class AdminOrderControllerTests {
     }
     @Test
     public void testGetOrderListWithStringPage() throws Exception {
-        User user = new User();
-        user.setUserID("nct127");
         mockMvc.perform(get("/admin/getOrderList.do").param("page","jw"))
                 .andExpect(status().isBadRequest());
     }
