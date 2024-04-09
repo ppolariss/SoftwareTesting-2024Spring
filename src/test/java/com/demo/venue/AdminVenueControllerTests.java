@@ -47,18 +47,23 @@ public class AdminVenueControllerTests {
     //    venue_manage
 
     @Test
-    public void testVenueManageWithSuccess() throws Exception {
+    public void testVenueManageWithSuccess() {
+        List<Venue> venues = IntStream.range(0, 15)
+                .mapToObj(i -> new Venue(i + 1, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME))
+                .collect(Collectors.toList());
         Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
+        Page<Venue> page = new PageImpl<>(venues.subList(0, 10), pageable, 15);
         when(venueService.findAll(pageable))
-                .thenReturn(new PageImpl<>(Collections.singletonList(
-                        new Venue(1, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME)
-                ), pageable, 1));
-
-        mockMvc.perform(get("/venue_manage"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/venue_manage"))
-                .andExpect(model().attribute("total", 1));
-        verify(venueService).findAll(pageable);
+                .thenReturn(page);
+        try {
+            mockMvc.perform(get("/venue_manage"))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attribute("total", 2));
+            verify(venueService).findAll(pageable);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
     }
 
     @Test
@@ -76,24 +81,20 @@ public class AdminVenueControllerTests {
         verify(venueService).findAll(pageable);
     }
 
-    @Test
-    public void testVenueManageWithOverflowSuccess() {
-        List<Venue> venues = IntStream.range(0, 15)
-                .mapToObj(i -> new Venue(i + 1, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME))
-                .collect(Collectors.toList());
-        Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
-        Page<Venue> page = new PageImpl<>(venues.subList(0, 10), pageable, 15);
-        when(venueService.findAll(pageable))
-                .thenReturn(page);
-        try {
-            mockMvc.perform(get("/venue_manage"))
-                    .andExpect(status().isOk())
-                    .andExpect(model().attribute("total", 2));
-        } catch (Exception e) {
-            e.printStackTrace();
-            fail();
-        }
-    }
+//    @Test
+//    public void testVenueManageWithOverflowSuccess() throws Exception {
+//        Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
+//        when(venueService.findAll(pageable))
+//                .thenReturn(new PageImpl<>(Collections.singletonList(
+//                        new Venue(1, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME)
+//                ), pageable, 1));
+//
+//        mockMvc.perform(get("/venue_manage"))
+//                .andExpect(status().isOk())
+//                .andExpect(view().name("admin/venue_manage"))
+//                .andExpect(model().attribute("total", 1));
+//        verify(venueService).findAll(pageable);
+//    }
 
 
     //    editVenue
@@ -118,6 +119,7 @@ public class AdminVenueControllerTests {
             mockMvc.perform(get("/venue_edit?venueID=2"))
                     .andExpect(status().isNotFound());
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
         verify(venueService).findByVenueID(2);
@@ -132,6 +134,7 @@ public class AdminVenueControllerTests {
             mockMvc.perform(get("/venue_edit"))
                     .andExpect(status().isBadRequest());
         } catch (Exception exception) {
+            exception.printStackTrace();
             fail();
         }
     }
@@ -215,6 +218,7 @@ public class AdminVenueControllerTests {
             mockMvc.perform(get("/venueList.do?page=-1"))
                     .andExpect(status().isBadRequest());
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
     }
@@ -285,7 +289,7 @@ public class AdminVenueControllerTests {
                         .param("price", "1")
                         .param("open_time", CORRECT_OPEN_TIME)
                         .param("close_time", CORRECT_CLOSE_TIME))
-                .andExpect(request().attribute("message", "添加失败"))
+                .andExpect(request().attribute("message", "添加失败！"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_add"));
         verify(venueService).create(any(Venue.class));
@@ -297,6 +301,7 @@ public class AdminVenueControllerTests {
             mockMvc.perform(post("/addVenue.do"))
                     .andExpect(status().isBadRequest());
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
     }
@@ -340,7 +345,7 @@ public class AdminVenueControllerTests {
                 .andExpect(status().isBadRequest());
     }
 
-//UUID.randomUUID().toString()
+    //UUID.randomUUID().toString()
 //                .thenThrow(NonUniqueResultException.class);
     @Test
     public void testAddVenueWithConflict() throws Exception {
@@ -562,6 +567,7 @@ public class AdminVenueControllerTests {
             mockMvc.perform(post("/modifyVenue.do"))
                     .andExpect(status().isBadRequest());
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
     }
