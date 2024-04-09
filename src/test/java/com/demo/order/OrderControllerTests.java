@@ -359,9 +359,8 @@ public class OrderControllerTests {
     }
     @Test
     public void testFinishOrderWithNotFoundID() throws Exception {
-        // TODO：这个找不到不会异常？
         int orderID = 127;
-
+        doThrow(RuntimeException.class).when(orderService).finishOrder(orderID);
         mockMvc.perform(post("/finishOrder.do").param("orderID", String.valueOf(orderID)))
                 .andExpect(status().isNotFound());
     }
@@ -402,6 +401,14 @@ public class OrderControllerTests {
                 .andExpect(view().name("order_edit"))
                 .andExpect(model().attribute("order",mockOrder))
                 .andExpect(model().attribute("venue",mockVenue));
+    }
+    @Test
+    public void testModifyOrderDoWithNotFoundID() throws Exception {
+        int notFoundID = 127;
+        when(orderService.findById(notFoundID)).thenThrow(EntityNotFoundException.class);
+        mockMvc.perform(get("/modifyOrder.do").param("orderID",String.valueOf(notFoundID)))
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("order_edit"));
     }
     @Test
     public void testModifyOrderDoWithInvalidID() throws Exception {
@@ -526,7 +533,7 @@ public class OrderControllerTests {
                         .param("venueName", "Venue1")
                         .param("date", "2024-03-30")
                         .param("startTime", "10:00")
-                        .param("hours", "-1")
+                        .param("hours", "1")
                         .param("orderID","2")
                         .sessionAttr("user",user))
                 .andExpect(status().isNotFound())
@@ -557,7 +564,6 @@ public class OrderControllerTests {
     }
     @Test
     public void testDelOrderWithNotFoundID() throws Exception {
-        //TODO: 直接抛出异常是否会导致无法测试？
         int orderID = 127;
         doThrow(EmptyResultDataAccessException.class).when(orderService).delOrder(orderID);
         mockMvc.perform(post("/delOrder.do").param("orderID", String.valueOf(orderID)))
@@ -630,6 +636,31 @@ public class OrderControllerTests {
 
         mockMvc.perform(get("/order/getOrderList.do").param("venueName", venueName).param("date","2023-01-27"))
                 .andExpect(status().isNotFound());
+    }
+    @Test
+    public void testOrderGetOrderListWithEmptyOrders() throws Exception {
+        // mock venue
+        String venueName = "nct127";
+        Venue mockVenue = new Venue();
+        mockVenue.setVenueID(1);
+        when(venueService.findByVenueName(venueName)).thenReturn(mockVenue);
+
+        // mock date
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime ldt1 = LocalDateTime.parse("2023-03-31 00:00:00",df);
+        LocalDateTime ldt2 = LocalDateTime.parse("2023-04-01 00:00:00",df);
+
+        //mock venueOrder
+        VenueOrder mockVenueOrder = new VenueOrder();
+        mockVenueOrder.setVenue(mockVenue);
+        List<Order> mockOrders = new ArrayList<>();
+        when(orderService.findDateOrder(1,ldt1,ldt2)).thenReturn(mockOrders);
+        mockVenueOrder.setOrders(mockOrders);
+
+        mockMvc.perform(get("/order/getOrderList.do").param("venueName","nct127").param("date","2023-03-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.venue").value(mockVenue))
+                .andExpect(jsonPath("$.orders",hasSize(0)));
     }
     @Test
     public void testOrderGetOrderListWithNoParam() throws Exception {
