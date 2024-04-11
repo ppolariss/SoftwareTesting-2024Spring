@@ -332,6 +332,13 @@ public class AdminNewsControllerTest {
 
 
     @Test
+    public void testAddNewsWithEmptyParam() throws Exception {
+        // empty param
+        mockMvc.perform(post("/addNews.do"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     public void testAddNewsWithSuccess() throws Exception {
         String title = "title";
         String content = "content";
@@ -357,6 +364,6 @@ public class AdminNewsControllerTest {
 
         // fail
         mockMvc.perform(post("/addNews.do").param("title", title).param("content", content))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().is3xxRedirection());
     }
 }
