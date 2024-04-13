@@ -1,14 +1,18 @@
 package com.demo.venue;
 
 import com.demo.controller.admin.AdminVenueController;
+import com.demo.entity.User;
 import com.demo.entity.Venue;
 import com.demo.service.VenueService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.*;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -21,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -43,6 +48,17 @@ public class AdminVenueControllerTests {
     @MockBean
     private VenueService venueService;
 
+    private MockHttpServletRequest request;
+
+    @BeforeEach
+    public void setUp() {
+        // 倒数第二个isadmin字段标识身份，0-用户，1-管理员
+        User admin = new User(1, "adminID", "adminName", "adminPassword", "admin@example.com", "15649851625", 1, "adminPic");
+
+        request = new MockHttpServletRequest();
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", admin);
+    }
+
 
     //    venue_manage
 
@@ -59,6 +75,28 @@ public class AdminVenueControllerTests {
             mockMvc.perform(get("/venue_manage"))
                     .andExpect(status().isOk())
                     .andExpect(model().attribute("total", 2));
+            verify(venueService).findAll(pageable);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+    }
+
+    @Test
+    public void testVenueManageWithUnauthorized() {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        List<Venue> venues = IntStream.range(0, 15)
+                .mapToObj(i -> new Venue(i + 1, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME))
+                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
+        Page<Venue> page = new PageImpl<>(venues.subList(0, 10), pageable, 15);
+        when(venueService.findAll(pageable))
+                .thenReturn(page);
+        try {
+            mockMvc.perform(get("/venue_manage").session((MockHttpSession) request.getSession()))
+                    .andExpect(status().isUnauthorized());
             verify(venueService).findAll(pageable);
         } catch (Exception e) {
             e.printStackTrace();
@@ -108,6 +146,20 @@ public class AdminVenueControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(view().name("/admin/venue_edit"))
                 .andExpect(model().attribute("venue", venue));
+        verify(venueService).findByVenueID(1);
+    }
+
+    @Test
+    public void testEditVenueWithUnauthorized() throws Exception {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        Venue venue = new Venue(1, "venue_name", "description", 1, "picture", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME);
+        when(venueService.findByVenueID(1))
+                .thenReturn(venue);
+
+        mockMvc.perform(get("/venue_edit?venueID=1").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
         verify(venueService).findByVenueID(1);
     }
 
@@ -168,6 +220,15 @@ public class AdminVenueControllerTests {
                 .andExpect(view().name("/admin/venue_add"));
     }
 
+    @Test
+    public void testVenueAddWithUnauthorized() throws Exception {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        mockMvc.perform(get("/venue_add").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
+    }
+
 
     //    getVenueList
     @Test
@@ -182,6 +243,23 @@ public class AdminVenueControllerTests {
         mockMvc.perform(get("/venueList.do?page=1"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[{\"venueID\":1,\"venueName\":\"venue_name\",\"description\":\"description\",\"price\":1,\"picture\":\"picture\",\"address\":\"address\",\"open_time\":\"" + CORRECT_OPEN_TIME + "\",\"close_time\":\"" + CORRECT_CLOSE_TIME + "\"}]"));
+        verify(venueService).findAll(pageable);
+    }
+
+    @Test
+    public void testGetVenueListWithUnauthorized() throws Exception {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("venueID").ascending());
+        Page<Venue> page = new PageImpl<>(Collections.singletonList(
+                new Venue(1, "venue_name", "description", 1, "picture", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME)
+        ), pageable, 1);
+
+        when(venueService.findAll(pageable))
+                .thenReturn(page);
+        mockMvc.perform(get("/venueList.do?page=1").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
         verify(venueService).findAll(pageable);
     }
 
@@ -254,6 +332,30 @@ public class AdminVenueControllerTests {
                         .param("close_time", CORRECT_CLOSE_TIME))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_manage"));
+        verify(venueService).create(any(Venue.class));
+    }
+
+    @Test
+    public void testAddVenueWithUnauthorized() throws Exception {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+//        ./resources/test.jpg
+        Path imagePath = Paths.get("./src/main/resources/static/venue.jpg");
+        byte[] imageBytes = Files.readAllBytes(imagePath);
+        MockMultipartFile imageFile = new MockMultipartFile("picture", "test.jpg", "image/jpg", imageBytes);
+        when(venueService.create(any(Venue.class)))
+                .thenReturn(1);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/addVenue.do")
+                        .file(imageFile)
+                        .param("venueName", "venue_name")
+                        .param("address", "address")
+                        .param("description", "description")
+                        .param("price", "1")
+                        .param("open_time", CORRECT_OPEN_TIME)
+                        .param("close_time", CORRECT_CLOSE_TIME)
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
         verify(venueService).create(any(Venue.class));
     }
 
@@ -398,6 +500,33 @@ public class AdminVenueControllerTests {
                         .param("close_time", CORRECT_CLOSE_TIME))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_manage"));
+        verify(venueService).findByVenueID(1);
+        verify(venueService).update(any(Venue.class));
+    }
+
+    @Test
+    public void testModifyVenueWithUnauthorized() throws Exception {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        Path imagePath = Paths.get("./src/main/resources/static/venue.jpg");
+        byte[] imageBytes = Files.readAllBytes(imagePath);
+        MockMultipartFile imageFile = new MockMultipartFile("picture", "test.jpg", "image/jpg", imageBytes);
+
+        when(venueService.findByVenueID(1))
+                .thenReturn(new Venue(1, "venue_names", "descriptions", 1, "", "addresses", "open_time", "close_time"));
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/modifyVenue.do")
+                        .file(imageFile)
+                        .param("venueID", "1")
+                        .param("venueName", "venue_name")
+                        .param("address", "address")
+                        .param("description", "description")
+                        .param("price", "1")
+                        .param("open_time", CORRECT_OPEN_TIME)
+                        .param("close_time", CORRECT_CLOSE_TIME)
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
         verify(venueService).findByVenueID(1);
         verify(venueService).update(any(Venue.class));
     }
@@ -585,6 +714,17 @@ public class AdminVenueControllerTests {
     }
 
     @Test
+    public void testDelVenueWithUnauthorized() throws Exception {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+        doNothing()
+                .when(venueService).delById(1);
+        mockMvc.perform(post("/delVenue.do")
+                        .param("venueID", "1").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     public void testDelVenueWithNotFound() throws Exception {
         doThrow(EmptyResultDataAccessException.class)
                 .when(venueService).delById(1);
@@ -641,6 +781,18 @@ public class AdminVenueControllerTests {
                         .param("venueName", "venue_name"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
+    }
+
+    @Test
+    public void testCheckVenueNameWithUnauthorized() throws Exception {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        when(venueService.countVenueName("venue_name"))
+                .thenReturn(0);
+        mockMvc.perform(post("/checkVenueName.do")
+                        .param("venueName", "venue_name").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
