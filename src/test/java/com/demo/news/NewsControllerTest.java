@@ -32,7 +32,7 @@ public class NewsControllerTest {
     private NewsService newsService;
 
     @Test
-    public void testNewsWithEmptyParam() throws Exception {
+    public void testNewsWithEmptyParam() {
         try {
             // empty param
             mockMvc.perform(get("/news"))
@@ -44,7 +44,7 @@ public class NewsControllerTest {
 
 
     @Test
-    public void testNewsWithNotIntParam() throws Exception {
+    public void testNewsWithNotIntParam() {
         try {
             // not int param
             mockMvc.perform(get("/news").param("newsID", "hello"))
@@ -55,7 +55,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsWithNegativeIntParam() throws Exception {
+    public void testNewsWithNegativeIntParam() {
         try {
             // negative int param
             mockMvc.perform(get("/news").param("newsID", "-10"))
@@ -66,7 +66,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsWithSuccess() throws Exception {
+    public void testNewsWithSuccess() {
         try {
             int newsIDSuccess = 1;
             int newsIDFail = 2;
@@ -87,7 +87,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsWithNotFound() throws Exception {
+    public void testNewsWithNotFound() {
         try {
             int newsIDSuccess = 1;
             int newsIDFail = 2;
@@ -106,7 +106,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsListWithEmptyParam() throws Exception {
+    public void testNewsListWithEmptyParam() {
         try {
             List<News> newsList = new ArrayList<>();
             LocalDateTime time = LocalDateTime.of(2021, 1, 1, 0, 0);
@@ -130,7 +130,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsListWithNotIntParam() throws Exception {
+    public void testNewsListWithNotIntParam() {
         try {
             // not int param
             mockMvc.perform(get("/news/getNewsList").param("page", "hello"))
@@ -141,7 +141,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsListWithNegativeIntParam() throws Exception {
+    public void testNewsListWithNegativeIntParam() {
         try {
             // negative int param
             mockMvc.perform(get("/news/getNewsList").param("page", "-10"))
@@ -152,7 +152,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsListWithSuccess() throws Exception {
+    public void testNewsListWithSuccess() {
         try {
             int pageSuccess = 1;
             int pageFail = 2;
@@ -180,7 +180,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsListWithNotFound() throws Exception {
+    public void testNewsListWithNotFound() {
         try {
             int pageSuccess = 1;
             int pageFail = 2;
@@ -208,7 +208,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsListPageWithEmptyData() throws Exception {
+    public void testNewsListPageWithEmptyData() {
         try {
             Page<News> mockEmptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 5, Sort.by("time").descending()), 0);
 
@@ -226,7 +226,7 @@ public class NewsControllerTest {
     }
 
     @Test
-    public void testNewsListPageWithNotEmptyData() throws Exception {
+    public void testNewsListPageWithNotEmptyData() {
         try {
             List<News> newsList = new ArrayList<>();
 
