@@ -327,7 +327,7 @@ public class AdminNewsControllerTest {
             User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
             Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
 
-            mockMvc.perform(get("/delNews.do").session((MockHttpSession) request.getSession()))
+            mockMvc.perform(post("/delNews.do").session((MockHttpSession) request.getSession()))
                     .andExpect(status().isUnauthorized());  // expect 401 Unauthorized
         } catch (Exception e) {
             fail();
@@ -414,7 +414,7 @@ public class AdminNewsControllerTest {
             User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
             Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
 
-            mockMvc.perform(get("/modifyNews.do").session((MockHttpSession) request.getSession()))
+            mockMvc.perform(post("/modifyNews.do").session((MockHttpSession) request.getSession()))
                     .andExpect(status().isUnauthorized());  // expect 401 Unauthorized
         } catch (Exception e) {
             fail();
@@ -526,7 +526,7 @@ public class AdminNewsControllerTest {
             User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
             Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
 
-            mockMvc.perform(get("/addNews.do").session((MockHttpSession) request.getSession()))
+            mockMvc.perform(post("/addNews.do").session((MockHttpSession) request.getSession()))
                     .andExpect(status().isUnauthorized());  // expect 401 Unauthorized
         } catch (Exception e) {
             fail();
