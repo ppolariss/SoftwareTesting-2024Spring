@@ -310,6 +310,21 @@ public class MessageControllerTests {
 
 
 
+    //添加用户鉴权
+    @Test
+    public void testModifyMessageWithInvalidRole() throws Exception{
+
+        // 构建请求并模拟未登录用户的会话
+        MockHttpServletRequestBuilder request = post("/modifyMessage.do")
+                .param("messageID", "1")
+                .param("content", "New content");
+
+        // 执行请求并验证响应状态码
+        mockMvc.perform(request)
+                .andExpect(status().isUnauthorized()); // 期望返回401未授权状态
+
+    }
+
 
     @Test
     public void testModifyMessageWithEmptyParam() throws Exception{
@@ -377,6 +392,15 @@ public class MessageControllerTests {
     }
 
 
+    //添加用户鉴权
+    @Test
+    public void testDelMessageWithInvalidRole() throws Exception{
+        // 构建请求但不设置认证信息
+        mockMvc.perform(post("/delMessage.do")
+                        .param("messageID", "1"))
+                .andExpect(status().isUnauthorized()); // 期望返回401未授权状态
+
+    }
     @Test
     public void testDelMessageWithValidId() throws Exception{
         // 模拟messageService的行为
