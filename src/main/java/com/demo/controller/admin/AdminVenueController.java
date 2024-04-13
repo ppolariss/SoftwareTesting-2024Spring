@@ -22,7 +22,7 @@ import java.util.Objects;
 @Controller
 public class AdminVenueController {
     @Autowired
-    private VenueService venueService;z
+    private VenueService venueService;
 
 
     @RequestMapping("/venue_manage")
