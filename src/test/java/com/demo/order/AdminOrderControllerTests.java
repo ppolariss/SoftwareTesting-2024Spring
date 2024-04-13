@@ -18,6 +18,7 @@ import com.demo.entity.User;
 import com.demo.entity.vo.OrderVo;
 import com.demo.service.OrderService;
 import com.demo.service.OrderVoService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -25,6 +26,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.NestedServletException;
 
@@ -32,6 +35,7 @@ import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -49,6 +53,16 @@ public class AdminOrderControllerTests {
 
     @MockBean
     private OrderDao orderDao;
+    private MockHttpServletRequest request;
+
+    @BeforeEach
+    public void setUp() {
+        // 倒数第二个isadmin字段标识身份，0-用户，1-管理员
+        User admin = new User(1, "adminID", "adminName", "adminPassword", "admin@example.com", "15649851625", 1, "adminPic");
+
+        request = new MockHttpServletRequest();
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", admin);
+    }
     @Test
     public void testReservationManageWithBothOrdersPaged() throws Exception {
         // mock data
@@ -65,7 +79,7 @@ public class AdminOrderControllerTests {
         when(orderVoService.returnVo(mockOrders)).thenReturn(mockOrderVos);
         when(orderService.findNoAuditOrder(order_pageable)).thenReturn(mockPage);
 
-        mockMvc.perform(get("/reservation_manage"))
+        mockMvc.perform(get("/reservation_manage").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reservation_manage"))
                 .andExpect(model().attribute("order_list",mockOrderVos))
@@ -81,7 +95,7 @@ public class AdminOrderControllerTests {
         when(orderService.findAuditOrder()).thenReturn(new ArrayList<>());
         when(orderService.findNoAuditOrder(order_pageable)).thenReturn(mockPage);
 
-        mockMvc.perform(get("/reservation_manage"))
+        mockMvc.perform(get("/reservation_manage").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reservation_manage"))
                 .andExpect(model().attribute("order_list",hasSize(0)))
@@ -98,11 +112,21 @@ public class AdminOrderControllerTests {
         when(orderVoService.returnVo(mockOrders)).thenReturn(mockOrderVos);
         when(orderService.findNoAuditOrder(order_pageable)).thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
 
-        mockMvc.perform(get("/reservation_manage"))
+        mockMvc.perform(get("/reservation_manage").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reservation_manage"))
                 .andExpect(model().attribute("order_list",mockOrderVos))
                 .andExpect(model().attribute("total",0));
+    }
+
+    @Test
+    public void testReservationManageWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        mockMvc.perform(get("/reservation_manage").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());  // expect 401 Unauthorized
     }
 
 
@@ -123,18 +147,18 @@ public class AdminOrderControllerTests {
         when(orderVoService.returnVo(mockOrderList)).thenReturn(mockVo);
 
         // test
-        mockMvc.perform(get("/admin/getOrderList.do"))
+        mockMvc.perform(get("/admin/getOrderList.do").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
     @Test
     public void testGetOrderListWithPageNotPositive() throws Exception {
-        mockMvc.perform(get("/admin/getOrderList.do").param("page", "-1"))
+        mockMvc.perform(get("/admin/getOrderList.do").param("page", "-1").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
     @Test
     public void testGetOrderListWithEmptyParam() throws Exception {
-        mockMvc.perform(get("/admin/getOrderList.do"))
+        mockMvc.perform(get("/admin/getOrderList.do").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
     @Test
@@ -143,15 +167,24 @@ public class AdminOrderControllerTests {
         when(orderService.findNoAuditOrder(any()))
                 .thenReturn(new PageImpl<>(Collections.emptyList(),order_pageable,0));
 
-        mockMvc.perform(get("/admin/getOrderList.do").param("page","5"))
+        mockMvc.perform(get("/admin/getOrderList.do").param("page","5").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(0)));
     }
     @Test
     public void testGetOrderListWithStringPage() throws Exception {
-        mockMvc.perform(get("/admin/getOrderList.do").param("page","jw"))
+        mockMvc.perform(get("/admin/getOrderList.do").param("page","jw").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testGetOrderListWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        mockMvc.perform(get("/admin/getOrderList.do").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());  // expect 401 Unauthorized
     }
 
 
@@ -163,7 +196,7 @@ public class AdminOrderControllerTests {
         when(orderDao.findByOrderID(orderID)).thenReturn(mockOrder);
         doNothing().when(orderDao).updateState(STATE_WAIT,orderID);
 
-        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
+        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)).session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
         verify(orderService, times(1)).confirmOrder(orderID);
@@ -173,7 +206,7 @@ public class AdminOrderControllerTests {
         int orderID = 1;
         doThrow(EmptyResultDataAccessException.class).when(orderService).confirmOrder(orderID);
 
-        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
+        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)).session((MockHttpSession) request.getSession()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string("false"));
         verify(orderService, times(1)).confirmOrder(orderID);
@@ -181,18 +214,27 @@ public class AdminOrderControllerTests {
     @Test
     public void testPassOrderWithNegativeID() throws Exception {
         int orderID = -1;
-        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)))
+        mockMvc.perform(post("/passOrder.do").param("orderID", String.valueOf(orderID)).session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
     @Test
     public void testPassOrderWithStringID() throws Exception {
-        mockMvc.perform(post("/passOrder.do").param("orderID", "nct127"))
+        mockMvc.perform(post("/passOrder.do").param("orderID", "nct127").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
     @Test
     public void testPassOrderWithEmptyParam() throws Exception {
-        mockMvc.perform(post("/passOrder.do"))
+        mockMvc.perform(post("/passOrder.do").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testPassOrderListWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        mockMvc.perform(post("/passOrder.do").param("orderID", "127").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());  // expect 401 Unauthorized
     }
 
 
@@ -204,7 +246,7 @@ public class AdminOrderControllerTests {
         when(orderDao.findByOrderID(orderID)).thenReturn(mockOrder);
         doNothing().when(orderDao).updateState(STATE_REJECT,orderID);
 
-        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)).session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));;
         verify(orderService, times(1)).rejectOrder(orderID);
@@ -214,7 +256,7 @@ public class AdminOrderControllerTests {
         int orderID = 1;
         doThrow(EmptyResultDataAccessException.class).when(orderService).rejectOrder(orderID);
 
-        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)).session((MockHttpSession) request.getSession()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string("false"));
         verify(orderService, times(1)).rejectOrder(orderID);
@@ -222,18 +264,27 @@ public class AdminOrderControllerTests {
     @Test
     public void testRejectOrderWithNegativeID() throws Exception {
         int orderID = -1;
-        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)))
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", String.valueOf(orderID)).session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
     @Test
     public void testRejectOrderWithStringID() throws Exception {
-        mockMvc.perform(post("/rejectOrder.do").param("orderID", "nct127"))
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", "nct127").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
     @Test
     public void testRejectOrderWithEmptyParam() throws Exception {
-        mockMvc.perform(post("/rejectOrder.do"))
+        mockMvc.perform(post("/rejectOrder.do").session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
+    }
+    @Test
+    public void testRejectOrderListWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        mockMvc.perform(post("/rejectOrder.do").param("orderID", "127").session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());  // expect 401 Unauthorized
     }
 
 }
