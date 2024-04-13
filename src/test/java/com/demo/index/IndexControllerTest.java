@@ -8,23 +8,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.demo.controller.IndexController;
 import com.demo.entity.Message;
 import com.demo.entity.News;
+import com.demo.entity.User;
 import com.demo.entity.Venue;
 import com.demo.entity.vo.MessageVo;
 import com.demo.service.MessageService;
 import com.demo.service.MessageVoService;
 import com.demo.service.NewsService;
 import com.demo.service.VenueService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.*;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @WebMvcTest(IndexController.class)
 public class IndexControllerTest {
@@ -44,9 +49,19 @@ public class IndexControllerTest {
     @MockBean
     private MessageService messageService;
 
+    private MockHttpServletRequest request;
+
+    @BeforeEach
+    public void setUp() {
+        // 倒数第二个is admin字段标识身份，0-用户，1-管理员
+        User admin = new User(1, "adminID", "adminName", "adminPassword", "admin@example.com", "15649851625", 1, "adminPic");
+        request = new MockHttpServletRequest();
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", admin);
+    }
+
 
     @Test
-    public void testIndexWithEmptyData() throws Exception {
+    public void testIndexWithEmptyData() {
         try {
             Pageable venue_pageable= PageRequest.of(0,5, Sort.by("venueID").ascending());
             Pageable news_pageable= PageRequest.of(0,5, Sort.by("time").descending());
@@ -75,7 +90,7 @@ public class IndexControllerTest {
     }
 
     @Test
-    public void testIndexWithNotEmptyData() throws Exception {
+    public void testIndexWithNotEmptyData() {
         try {
             Pageable venue_pageable= PageRequest.of(0,5, Sort.by("venueID").ascending());
             Pageable news_pageable= PageRequest.of(0,5, Sort.by("time").descending());
@@ -106,6 +121,19 @@ public class IndexControllerTest {
                     .andExpect(model().attribute("news_list", newsList))
                     .andExpect(model().attribute("venue_list", venueList))
                     .andExpect(model().attribute("message_list", messageVoList));
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    @Test
+    public void testAdminIndexWithInvalidRole() {
+        try {
+            User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+            Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+            mockMvc.perform(get("/admin_index").session((MockHttpSession) request.getSession()))
+                    .andExpect(status().isUnauthorized());  // expect 401 Unauthorized
         } catch (Exception e) {
             fail();
         }
