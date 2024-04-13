@@ -32,6 +32,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import org.springframework.data.domain.*;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(MessageController.class)
 public class MessageControllerTests {
@@ -259,19 +261,39 @@ public class MessageControllerTests {
     }
 
 
+    //添加用户鉴权
+    @Test
+    public void testSendMessageWithInvalidRole() throws Exception{
+        // 构建请求，包含发送消息所需的参数，但不设置认证信息
+        MockHttpServletRequestBuilder request = post("/sendMessage")
+                .param("userID", "1") // 假设有效的用户ID
+                .param("content", "Test message"); // 消息内容
+
+        // 执行请求并验证响应状态码
+        mockMvc.perform(request)
+                .andExpect(status().isUnauthorized()); // 期望返回401未授权状态
+
+    }
+
     @Test
     public void testSendMessageWithSuccess() throws Exception{
         String userID = "user";
-        String content = "content";
+        String content = "Test message";
+
+        // 创建一个带有用户属性的会话
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("user", new User()); // 假设User对象代表认证的用户
 
         when(messageService.create(any(Message.class)))
                 .thenReturn(1);
 
-        mockMvc.perform(post("/sendMessage")
-                .param("useID",userID)
-                .param("content",content))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/message_list"));
+        // 构建请求并添加必要的参数
+        ResultActions actions = mockMvc.perform(post("/sendMessage")
+                        .param("userID", userID)
+                        .param("content", content)
+                        .session(session)) // 使用带有用户属性的会话
+                .andExpect(status().is3xxRedirection()) // 期望重定向
+                .andExpect(redirectedUrl("/message_list")); // 验证重定向到预期的URL
     }
 
     @Test
@@ -314,18 +336,28 @@ public class MessageControllerTests {
     @Test
     public void testModifyMessageWithSuccess() throws Exception{
         int messageID = 1;
-        String content = "content";
+        String content = "New content";
 
-        Message message = new Message(messageID,content,"test_message", LocalDateTime.now(),2);
+        Message message = new Message(messageID, content, "test_message", LocalDateTime.now(), 2);
         doNothing().when(messageService).update(message);
 
         when(messageService.findById(messageID)).thenReturn(message);
 
-        mockMvc.perform(post("/modifyMessage.do")
-                .param("messageID",String.valueOf(messageID))
-                .param("content",content))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value(true));
+        // 创建一个带有用户属性的会话
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("user", new User()); // 假设User对象代表认证的用户
+
+        // 构建请求并添加必要的参数和会话
+        ResultActions actions = mockMvc.perform(post("/modifyMessage.do")
+                        .param("messageID", String.valueOf(messageID))
+                        .param("content", content)
+                        .session(session)) // 使用带有用户属性的会话
+                .andExpect(status().isOk()) // 期望请求成功
+                .andExpect(jsonPath("$").value(true)); // 验证响应体中的值
+
+        // 清理Mock对象
+        verify(messageService, times(1)).update(message);
+        reset(messageService);
 
     }
 
@@ -343,16 +375,21 @@ public class MessageControllerTests {
                 .andExpect(jsonPath("$").value(false));
 
     }
+
+
     @Test
     public void testDelMessageWithValidId() throws Exception{
-        int validId = 1;
-        Message mockMessage = new Message();
-        mockMessage.setMessageID(1);
+        // 模拟messageService的行为
         doNothing().when(messageService).delById(1);
 
-        mockMvc.perform(post("/delMessage.do").param("messageID",String.valueOf(validId)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value(true));
+        // 构建请求并添加必要的参数
+        mockMvc.perform(post("/delMessage.do")
+                        .param("messageID", "1"))
+                .andExpect(status().isOk()) // 期望请求成功
+                .andExpect(jsonPath("$").value(true)); // 验证响应体中的值
+
+        // 验证messageService的行为是否被调用
+        verify(messageService).delById(1);
 
 
     }
