@@ -3,6 +3,7 @@ package com.demo.user;
 import com.demo.controller.admin.AdminUserController;
 import com.demo.entity.User;
 import com.demo.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,11 +12,14 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -35,6 +39,21 @@ public class AdminUserControllerTests {
     @MockBean
     private UserService userService;
 
+    private MockHttpServletRequest request;
+
+    @BeforeEach
+    public void setUp() {
+        reset(userService);
+
+        // isadmin字段标识身份，0-用户，1-管理员
+        User admin = new User(1, "adminID", "adminName", "adminPassword", "admin@example.com", "15649851625", 1, "adminPic");
+
+        // 对于每个请求模拟设置session，假设为合法的管理员身份，不合法的情况在测试函数中再单独设置
+        request = new MockHttpServletRequest();
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", admin);
+
+    }
+
     /*
      * 展示管理用户界面
      * */
@@ -52,7 +71,8 @@ public class AdminUserControllerTests {
         when(userService.findByUserID(user_pageable)).thenReturn(mockPage);
 
         // Expect total pages to be 2 because there are more messages (15) than can fit on one page (10), necessitating a second page.
-        mockMvc.perform(get("/user_manage"))
+        mockMvc.perform(get("/user_manage")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/user_manage"))
                 .andExpect(model().attribute("total", 2));
@@ -67,12 +87,26 @@ public class AdminUserControllerTests {
 
         when(userService.findByUserID(user_pageable)).thenReturn(emptyPage);
 
-        mockMvc.perform(get("/user_manage"))
+        mockMvc.perform(get("/user_manage")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/user_manage"))
                 .andExpect(model().attribute("total", 0));
 
         verify(userService).findByUserID(user_pageable);
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testUserManageWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户，为非法权限
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        // 携带session的验证，期望返回 401 Unauthorized
+        mockMvc.perform(get("/user_manage")
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
     }
 
 
@@ -91,7 +125,9 @@ public class AdminUserControllerTests {
 
         when(userService.findByUserID(user_pageable)).thenReturn(mockPage);
 
-        mockMvc.perform(get("/userList.do").param("page", String.valueOf(pageValid)))
+        mockMvc.perform(get("/userList.do")
+                        .param("page", String.valueOf(pageValid))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
@@ -109,7 +145,8 @@ public class AdminUserControllerTests {
 
         when(userService.findByUserID(user_pageable)).thenReturn(mockPage);
 
-        mockMvc.perform(get("/userList.do"))
+        mockMvc.perform(get("/userList.do")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
@@ -122,7 +159,9 @@ public class AdminUserControllerTests {
 
         when(userService.findByUserID(user_pageable)).thenReturn(new PageImpl<>(Collections.emptyList(), user_pageable, 0));
 
-        mockMvc.perform(get("/userList.do").param("page", String.valueOf(1)))
+        mockMvc.perform(get("/userList.do")
+                        .param("page", String.valueOf(1))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(0))); // 直接检查响应体是否为一个空数组
@@ -135,7 +174,9 @@ public class AdminUserControllerTests {
     public void testUserListWithPageNotPositive() throws Exception {
         int pageInvalid = 0;
 
-        mockMvc.perform(get("/userList.do").param("page", String.valueOf(pageInvalid)))
+        mockMvc.perform(get("/userList.do")
+                        .param("page", String.valueOf(pageInvalid))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
 
         verify(userService, never()).findByUserID(anyString());
@@ -150,7 +191,9 @@ public class AdminUserControllerTests {
 
         when(userService.findByUserID(user_pageable)).thenReturn(new PageImpl<>(Collections.emptyList(), user_pageable, 0));
 
-        mockMvc.perform(get("/userList.do").param("page", String.valueOf(pageExceedingLimit)))
+        mockMvc.perform(get("/userList.do")
+                        .param("page", String.valueOf(pageExceedingLimit))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isNotFound());
 
         verify(userService).findByUserID(user_pageable);
@@ -160,10 +203,25 @@ public class AdminUserControllerTests {
     public void testUserListWithPageNotNum() throws Exception {
         String pageNotNum = "hello";
 
-        mockMvc.perform(get("/userList.do").param("page", pageNotNum))
+        mockMvc.perform(get("/userList.do")
+                        .param("page", pageNotNum)
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
 
         verify(userService, never()).findByUserID(anyString());
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testUserListWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户，为非法权限
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        // 携带session的验证，期望返回 401 Unauthorized
+        mockMvc.perform(get("/userList.do")
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
     }
 
 
@@ -172,10 +230,24 @@ public class AdminUserControllerTests {
      * */
 
     @Test
-    public void testUserAdd() throws Exception {
-        mockMvc.perform(get("/user_add"))
+    public void testUserAddWithValidRole() throws Exception {
+        mockMvc.perform(get("/user_add")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/user_add"));
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testUserAddWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户，为非法权限
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        // 携带session的验证，期望返回 401 Unauthorized
+        mockMvc.perform(get("/user_add")
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
     }
 
 
@@ -198,7 +270,8 @@ public class AdminUserControllerTests {
                         .param("userName", userName)
                         .param("password", password)
                         .param("email", email)
-                        .param("phone", phone))
+                        .param("phone", phone)
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("user_manage"));
 
@@ -208,7 +281,8 @@ public class AdminUserControllerTests {
     // BUG: 没有检查参数为空的情况
     @Test
     public void testAddUserWithEmptyParam() throws Exception {
-        mockMvc.perform(post("/addUser.do"))
+        mockMvc.perform(post("/addUser.do")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
 
         verify(userService, never()).create(ArgumentMatchers.any(User.class));
@@ -222,7 +296,8 @@ public class AdminUserControllerTests {
                         .param("userName", "test")
                         .param("password", "password123")
                         .param("email", "invalid_email")  // invalid format
-                        .param("phone", "13495684256"))
+                        .param("phone", "13495684256")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -234,7 +309,8 @@ public class AdminUserControllerTests {
                         .param("userName", "test")
                         .param("password", "password123")
                         .param("email", "test@example.com")
-                        .param("phone", "invalid_phone_number"))  // invalid format
+                        .param("phone", "invalid_phone_number") // invalid format
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -255,8 +331,22 @@ public class AdminUserControllerTests {
                         .param("userName", userName)
                         .param("password", password)
                         .param("email", email)
-                        .param("phone", phone))
+                        .param("phone", phone)
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isConflict());  // 409 conflict
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testAddUserWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户，为非法权限
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        // 携带session的验证，期望返回 401 Unauthorized
+        mockMvc.perform(post("/addUser.do")
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
     }
 
 
@@ -273,7 +363,9 @@ public class AdminUserControllerTests {
 
         when(userService.findById(validId)).thenReturn(user);
 
-        mockMvc.perform(get("/user_edit").param("id", String.valueOf(validId)))
+        mockMvc.perform(get("/user_edit")
+                        .param("id", String.valueOf(validId))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/user_edit"))
                 .andExpect(model().attribute("user", user));
@@ -288,7 +380,9 @@ public class AdminUserControllerTests {
 
         when(userService.findById(notExistingId)).thenReturn(null);
 
-        mockMvc.perform(get("/user_edit").param("id", String.valueOf(notExistingId)))
+        mockMvc.perform(get("/user_edit")
+                        .param("id", String.valueOf(notExistingId))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isNotFound())
                 .andExpect(view().name("admin/user_edit"));
 
@@ -300,7 +394,9 @@ public class AdminUserControllerTests {
     public void testUserEditWithNotPositiveId() throws Exception {
         int notPositiveId = -1;
 
-        mockMvc.perform(get("/user_edit").param("id", String.valueOf(notPositiveId)))
+        mockMvc.perform(get("/user_edit")
+                        .param("id", String.valueOf(notPositiveId))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -309,15 +405,32 @@ public class AdminUserControllerTests {
     public void testUserEditWithNotNumId() throws Exception {
         String notNumId = "hello";
 
-        mockMvc.perform(get("/user_edit").param("id", notNumId))
+        mockMvc.perform(get("/user_edit")
+                        .param("id", notNumId)
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
 
     // BUG: 没有检查 id为空的情况
     @Test
     public void testUserEditWithEmptyParam() throws Exception {
-        mockMvc.perform(get("/user_edit"))
+        mockMvc.perform(get("/user_edit")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testUserEditWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户，为非法权限
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        // 携带session的验证，期望返回 401 Unauthorized
+        mockMvc.perform(get("/user_edit")
+                        .param("id", "1")
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
     }
 
 
@@ -355,6 +468,7 @@ public class AdminUserControllerTests {
                         .param("password", password)
                         .param("email", email)
                         .param("phone", phone)
+                        .session((MockHttpSession) request.getSession())
                 )
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("user_manage"));
@@ -382,6 +496,7 @@ public class AdminUserControllerTests {
                         .param("password", password)
                         .param("email", email)
                         .param("phone", phone)
+                        .session((MockHttpSession) request.getSession())
                 )
                 .andExpect(status().isNotFound());
 
@@ -391,12 +506,26 @@ public class AdminUserControllerTests {
     // BUG: 没有检查参数为空的情况
     @Test
     public void testModifyUserWithEmptyParam() throws Exception {
-        mockMvc.perform(post("/modifyUser.do"))
+        mockMvc.perform(post("/modifyUser.do")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
 
     // 这里是用 string型的 userID来查找用户，所以没有对负数和非数字参数的检查
     // 不用检查 userID冲突的情况，因为函数中并不会修改 userID
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testModifyUserWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户，为非法权限
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        // 携带session的验证，期望返回 401 Unauthorized
+        mockMvc.perform(post("/modifyUser.do")
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
+    }
 
 
     /*
@@ -409,7 +538,9 @@ public class AdminUserControllerTests {
 
         doNothing().when(userService).delByID(validId);
 
-        mockMvc.perform(post("/delUser.do").param("id", String.valueOf(validId)))
+        mockMvc.perform(post("/delUser.do")
+                        .param("id", String.valueOf(validId))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
 
@@ -425,7 +556,9 @@ public class AdminUserControllerTests {
         doThrow(new EmptyResultDataAccessException(String.format("No User with id %s exists!", notExistingId), 1))
                 .when(userService).delByID(notExistingId);
 
-        mockMvc.perform(post("/delUser.do").param("id", String.valueOf(notExistingId)))
+        mockMvc.perform(post("/delUser.do")
+                        .param("id", String.valueOf(notExistingId))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string("false"));
 
@@ -436,22 +569,41 @@ public class AdminUserControllerTests {
     @Test
     public void testDelUserWithInvalidId() throws Exception {
         int invalidId = -1;
-        mockMvc.perform(post("/delUser.do").param("id", String.valueOf(invalidId)))
+        mockMvc.perform(post("/delUser.do")
+                        .param("id", String.valueOf(invalidId))
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     public void testDelUserWithStringId() throws Exception {
         String stringId = "errorId";
-        mockMvc.perform(post("/delUser.do").param("id", stringId))
+        mockMvc.perform(post("/delUser.do")
+                        .param("id", stringId)
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
     }
 
     // BUG: 没有检查参数不存在的情况
     @Test
     public void testDelUserWithEmptyParam() throws Exception {
-        mockMvc.perform(post("/delUser.do"))
+        mockMvc.perform(post("/delUser.do")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testDelUserWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户，为非法权限
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        // 携带session的验证，期望返回 401 Unauthorized
+        mockMvc.perform(post("/delUser.do")
+                        .param("id", "1")
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
     }
 
 
@@ -465,7 +617,9 @@ public class AdminUserControllerTests {
 
         when(userService.countUserID(anyString())).thenReturn(1);
 
-        mockMvc.perform(post("/checkUserID.do").param("userID", existingUserID))
+        mockMvc.perform(post("/checkUserID.do")
+                        .param("userID", existingUserID)
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().string("false"));
 
@@ -478,7 +632,9 @@ public class AdminUserControllerTests {
 
         when(userService.countUserID(anyString())).thenReturn(0);
 
-        mockMvc.perform(post("/checkUserID.do").param("userID", notExistingUserID))
+        mockMvc.perform(post("/checkUserID.do")
+                        .param("userID", notExistingUserID)
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
 
@@ -488,8 +644,22 @@ public class AdminUserControllerTests {
     // BUG: 没有检查 userID 为 null
     @Test
     public void testCheckUserIDWithInvalidUserID() throws Exception {
-        mockMvc.perform(post("/checkUserID.do"))
+        mockMvc.perform(post("/checkUserID.do")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testCheckUserIDWithInvalidRole() throws Exception {
+        // 倒数第二个isadmin字段设置为0，代表为用户，为非法权限
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        Objects.requireNonNull(request.getSession()).setAttribute("admin", user);
+
+        // 携带session的验证，期望返回 401 Unauthorized
+        mockMvc.perform(post("/checkUserID.do")
+                        .session((MockHttpSession) request.getSession()))
+                .andExpect(status().isUnauthorized());
     }
 
 }
