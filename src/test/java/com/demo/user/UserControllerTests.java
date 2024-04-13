@@ -11,6 +11,7 @@ import com.demo.controller.user.UserController;
 import com.demo.entity.User;
 import com.demo.service.UserService;
 import com.demo.utils.FileUtil;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,12 +37,19 @@ public class UserControllerTests {
     private UserService userService;
 
     private MockHttpServletRequest request;
-    private MockHttpServletResponse response;
+
+    private MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
 
     @BeforeEach
     public void setUp() {
+        reset(userService);
         request = new MockHttpServletRequest();
-        response = new MockHttpServletResponse();
+    }
+
+    // 对于模拟相同静态方法，每个线程中只能注册一次
+    @AfterEach
+    void tearDown() {
+        mockedStatic.close();  // 在每个测试方法结束时取消注册之前的静态模拟
     }
 
     /*
@@ -247,12 +254,13 @@ public class UserControllerTests {
 
 
     /*
-     * 账号登出
+     * 用户退出登录
      * */
 
     @Test
-    public void testLogout() throws Exception {
-        request.getSession().setAttribute("user", new User());
+    public void testLogoutWithLogin() throws Exception {
+        User user = new User(1, "userID", "userName", "userPassword", "user@example.com", "14695846221", 0, "userPic");
+        request.getSession().setAttribute("user", user);
 
         mockMvc.perform(get("/logout.do").session((MockHttpSession) request.getSession()))
                 .andExpect(status().is3xxRedirection())
@@ -268,9 +276,15 @@ public class UserControllerTests {
                 .andExpect(redirectedUrl("/index"));
     }
 
+
+    /*
+     * 管理员退出登录
+     * */
+
     @Test
-    public void testQuit() throws Exception {
-        request.getSession().setAttribute("admin", new User());
+    public void testQuitWithLogin() throws Exception {
+        User admin = new User(1, "adminID", "adminName", "adminPassword", "admin@example.com", "15649851625", 1, "adminPic");
+        request.getSession().setAttribute("admin", admin);
 
         mockMvc.perform(get("/quit.do").session((MockHttpSession) request.getSession()))
                 .andExpect(status().is3xxRedirection())
@@ -284,7 +298,6 @@ public class UserControllerTests {
         mockMvc.perform(get("/quit.do"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/index"));
-//                .andExpect(status().isUnauthorized());
     }
 
 
@@ -294,14 +307,21 @@ public class UserControllerTests {
 
     @Test
     public void testUserInfo() throws Exception {
-        User user = new User(0, "1", "test", "testPwd", "test@example.com", "13549526153", 0, "image.jpg");
+        User user = new User(1, "1", "test", "testPwd", "test@example.com", "13549526153", 0, "image.jpg");
+        request.getSession().setAttribute("user", user);
 
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("user", user);
-
-        mockMvc.perform(get("/user_info").session(session))
+        mockMvc.perform(get("/user_info")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("user_info"));
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testUserInfoWithoutLogin() throws Exception {
+        // 未传递session，期望返回非法权限错误
+        mockMvc.perform(get("/user_info"))
+                .andExpect(status().isUnauthorized());
     }
 
 
@@ -311,7 +331,6 @@ public class UserControllerTests {
 
     @Test
     public void testUpdateUserWithValidInfo() throws Exception {
-
         String userID = "1";
         String userName = "test";
         String password = "password123";
@@ -320,15 +339,15 @@ public class UserControllerTests {
         MockMultipartFile picture = new MockMultipartFile("picture", "image.jpg", "image/jpeg", "Some image content here".getBytes());
 
         User userBeforeUpdate = new User();
+        userBeforeUpdate.setId(1);
         userBeforeUpdate.setUserID(userID);
+        request.getSession().setAttribute("user", userBeforeUpdate);
 
-        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
-
-        // Mock Static Method
-        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
-        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+        User userAfterUpdate = new User(1, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
 
         when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
+        // Mock Static Method
+        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
                         .file(picture)
@@ -352,7 +371,6 @@ public class UserControllerTests {
 
     @Test
     public void testUpdateUserWithNullNewPassword() throws Exception {
-
         String userID = "1";
         String userName = "test";
         String password = "password123";  // old password
@@ -361,16 +379,15 @@ public class UserControllerTests {
         MockMultipartFile picture = new MockMultipartFile("picture", "image.jpg", "image/jpeg", "Some image content here".getBytes());
 
         User userBeforeUpdate = new User();
+        userBeforeUpdate.setId(1);
         userBeforeUpdate.setUserID(userID);
         userBeforeUpdate.setPassword(password);
+        request.getSession().setAttribute("user", userBeforeUpdate);
 
-        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
-
-        // Mock Static Method
-        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
-        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+        User userAfterUpdate = new User(1, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
 
         when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
+        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
                                 .file(picture)
@@ -394,7 +411,6 @@ public class UserControllerTests {
 
     @Test
     public void testUpdateUserWithEmptyStringNewPassword() throws Exception {
-
         String userID = "1";
         String userName = "test";
         String password = "password123";  // old password
@@ -403,15 +419,15 @@ public class UserControllerTests {
         MockMultipartFile picture = new MockMultipartFile("picture", "image.jpg", "image/jpeg", "Some image content here".getBytes());
 
         User userBeforeUpdate = new User();
+        userBeforeUpdate.setId(1);
         userBeforeUpdate.setUserID(userID);
         userBeforeUpdate.setPassword(password);
+        request.getSession().setAttribute("user", userBeforeUpdate);
 
-        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
-
-        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
-        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+        User userAfterUpdate = new User(1, userID, userName, password, email, phone, 0, picture.getOriginalFilename());
 
         when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
+        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
                         .file(picture)
@@ -435,7 +451,6 @@ public class UserControllerTests {
 
     @Test
     public void testUpdateUserWithEmptyStringPicture() throws Exception {
-
         String userID = "1";
         String userName = "test";
         String password = "password123";
@@ -446,15 +461,15 @@ public class UserControllerTests {
         MockMultipartFile picture = new MockMultipartFile("picture", "", "image/jpeg", "Some image content here".getBytes());
 
         User userBeforeUpdate = new User();
+        userBeforeUpdate.setId(1);
         userBeforeUpdate.setUserID(userID);
         userBeforeUpdate.setPicture(originalPictureName);
+        request.getSession().setAttribute("user", userBeforeUpdate);
 
-        User userAfterUpdate = new User(0, userID, userName, password, email, phone, 0, originalPictureName);
-
-        MockedStatic<FileUtil> mockedStatic = Mockito.mockStatic(FileUtil.class);
-        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
+        User userAfterUpdate = new User(1, userID, userName, password, email, phone, 0, originalPictureName);
 
         when(userService.findByUserID(anyString())).thenReturn(userBeforeUpdate);
+        mockedStatic.when(() -> FileUtil.saveUserFile(picture)).thenReturn(picture.getOriginalFilename());
 
         mockMvc.perform(MockMvcRequestBuilders.multipart("/updateUser.do")
                         .file(picture)   // new picture's original name is empty string so will not be updated
@@ -479,13 +494,17 @@ public class UserControllerTests {
     // BUG: 没有检查用户不存在的情况
     @Test
     public void testUpdateUserWithWithNotExistingUser() throws Exception {
-
         String userID = "not exists";  // not exists
         String userName = "test";
         String password = "password123";
         String email = "test@example.com";
         String phone = "1234567890";
         MockMultipartFile picture = new MockMultipartFile("picture", "image.jpg", "image/jpeg", "Some image content here".getBytes());
+
+        User userBeforeUpdate = new User();
+        userBeforeUpdate.setId(1);
+        userBeforeUpdate.setUserID(userID);
+        request.getSession().setAttribute("user", userBeforeUpdate);
 
         when(userService.findByUserID(userID)).thenReturn(null);  // user not exists
 
@@ -506,8 +525,22 @@ public class UserControllerTests {
     // BUG: 没有检查参数为空的情况
     @Test
     public void testUpdateUserWithEmptyParam() throws Exception {
-        mockMvc.perform(post("/updateUser.do"))
+        User userBeforeUpdate = new User();
+        userBeforeUpdate.setId(1);
+        userBeforeUpdate.setUserID("userID");
+        request.getSession().setAttribute("user", userBeforeUpdate);
+
+        mockMvc.perform(post("/updateUser.do")
+                        .session((MockHttpSession) request.getSession()))
                 .andExpect(status().isBadRequest());
+    }
+
+    // BUG: 未进行鉴权检查
+    @Test
+    public void testUpdateUserWithoutLogin() throws Exception {
+        // 未传递session，期望返回非法权限错误
+        mockMvc.perform(post("/updateUser.do"))
+                .andExpect(status().isUnauthorized());
     }
 
 
