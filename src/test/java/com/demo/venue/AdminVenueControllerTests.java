@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.*;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -376,6 +377,51 @@ public class AdminVenueControllerTests {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("venue_manage"));
         verify(venueService).create(venue);
+    }
+
+    final String LONG_STRING = "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+
+    @Test
+    public void testAddVenueWithOverflow() {
+        try {
+            Venue venue = new Venue(0, "venue_name", "description", 1, "", "address", CORRECT_OPEN_TIME, CORRECT_CLOSE_TIME);
+            when(venueService.create(venue))
+                    .thenReturn(1);
+
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/addVenue.do")
+                            .file(new MockMultipartFile("picture", "", "image/jpg", new byte[0]))
+                            .param("venueName", "venue_name")
+                            .param("address", "address")
+                            .param("description", "description")
+                            .param("price", LONG_STRING)
+                            .param("open_time", CORRECT_OPEN_TIME)
+                            .param("close_time", CORRECT_CLOSE_TIME))
+                    .andExpect(status().isBadRequest());
+            verify(venueService).create(venue);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+    }
+
+    @Test
+    public void testAddVenueWithOverflow2() {
+        doThrow(DataIntegrityViolationException.class)
+                .when(venueService).create(any());
+        try {
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/addVenue.do")
+                            .file(new MockMultipartFile("picture", "", "image/jpg", new byte[0]))
+                            .param("venueName", "venue_name")
+                            .param("address", "address")
+                            .param("description", LONG_STRING)
+                            .param("price", "1")
+                            .param("open_time", CORRECT_OPEN_TIME)
+                            .param("close_time", CORRECT_CLOSE_TIME))
+                    .andExpect(status().isBadRequest());
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
     }
 
     @Test
