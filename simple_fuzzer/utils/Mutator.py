@@ -211,7 +211,7 @@ class Mutator:
 
 
 # for test
-if __name__ == '__main__':
+def test_base_mutator():
     for i in range(10000):
         print("\n====================================================")
         origin = "abcdefgh."
@@ -224,4 +224,6 @@ if __name__ == '__main__':
         print("* Havoc Random Replace:      ", havoc_random_replace(origin, True))
         print("====================================================")
 
-    print("\nNo running error for 10000 cases\n\npass. ")
+
+if __name__ == '__main__':
+    test_base_mutator()
