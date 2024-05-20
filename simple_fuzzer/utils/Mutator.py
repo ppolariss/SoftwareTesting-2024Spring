@@ -27,8 +27,11 @@ def flip_random_bits(s: str, print_mutator=False) -> str:
     从 s 中随机挑选一个 bit，将其与其后面 N - 1 位翻转（翻转即 0 -> 1; 1 -> 0）
     注意：不要越界
     """
+
     # 随机生成 N
     N = random.choice([1, 2, 4])
+    if len(s) <= N: #如果小于1
+        return s  # 如果字符串为空，直接返回
     # 随机选择一个 bit
     random_index = random.randint(0, 8 * (len(s) - N))
 
@@ -72,6 +75,7 @@ def flip_random_bits(s: str, print_mutator=False) -> str:
     return result
 
 
+
 def arithmetic_random_bytes(s: str, print_mutator=False) -> str:
     """
     基于 AFL 变异算法策略中的 arithmetic inc/dec 与 random havoc 实现相邻 N 字节随机增减（N = 1, 2, 4），其中 N 为随机生成
@@ -84,6 +88,10 @@ def arithmetic_random_bytes(s: str, print_mutator=False) -> str:
     """
     # 随机生成 N
     N = random.choice([1, 2, 4])
+    if len(s) == 0:
+        return s 
+    if len(s) < N:
+        return s
     # 随机选择一个索引位置
     index = random.randint(0, len(s) - N)
     # 从字符串中获取 N 字节，并将其转换为数字
@@ -117,6 +125,9 @@ def interesting_random_bytes(s: str, print_mutator=False) -> str:
 
     # 随机生成 N
     N = random.choice([1, 2, 4])
+    if len(s) < N:
+        return s  # If the string is not long enough, return it as is
+
 
     # 随机选择一个索引位置
     index = random.randint(0, len(s) - N)
