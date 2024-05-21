@@ -11,6 +11,10 @@ def insert_random_character(s: str, print_mutator=False) -> str:
     pos 为随机生成，范围为 [0, len(s)]
     插入的 byte 为随机生成，范围为 [32, 127]
     """
+
+    if len(s) == 0:
+        return chr(random.randint(32, 127))
+
     # 随机生成 pos 和 byte
     pos = random.randint(0, len(s))
     random_char = chr(random.randint(32, 127))
@@ -28,9 +32,12 @@ def flip_random_bits(s: str, print_mutator=False) -> str:
     注意：不要越界
     """
 
+    if len(s) == 0:
+        return s
+
     # 随机生成 N
     N = random.choice([1, 2, 4])
-    if len(s) <= N: #如果小于1
+    if len(s) <= N:  #如果小于1
         return s  # 如果字符串为空，直接返回
     # 随机选择一个 bit
     random_index = random.randint(0, 8 * (len(s) - N))
@@ -75,7 +82,6 @@ def flip_random_bits(s: str, print_mutator=False) -> str:
     return result
 
 
-
 def arithmetic_random_bytes(s: str, print_mutator=False) -> str:
     """
     基于 AFL 变异算法策略中的 arithmetic inc/dec 与 random havoc 实现相邻 N 字节随机增减（N = 1, 2, 4），其中 N 为随机生成
@@ -86,10 +92,14 @@ def arithmetic_random_bytes(s: str, print_mutator=False) -> str:
     从 s 中随机挑选一个 byte，将其与其后面 N - 1 个 bytes 进行字节随机增减
     注意：不要越界；如果出现单个字节在添加随机数之后，可以通过取模操作使该字节落在 [0, 255] 之间
     """
+
+    if len(s) == 0:
+        return s
+
     # 随机生成 N
     N = random.choice([1, 2, 4])
     if len(s) == 0:
-        return s 
+        return s
     if len(s) < N:
         return s
     # 随机选择一个索引位置
@@ -123,11 +133,13 @@ def interesting_random_bytes(s: str, print_mutator=False) -> str:
         4: [0, 1, 65536, 4294967295]  # 对于4 bytes
     }
 
+    if len(s) == 0:
+        return s
+
     # 随机生成 N
     N = random.choice([1, 2, 4])
     if len(s) < N:
         return s  # If the string is not long enough, return it as is
-
 
     # 随机选择一个索引位置
     index = random.randint(0, len(s) - N)
@@ -155,6 +167,14 @@ def havoc_random_insert(s: str, print_mutator=False):
     """
     index = random.randint(0, len(s))
 
+    if len(s) == 0:
+        if random.random() < 0.75:
+            return s
+        else:
+            length = random.randint(1, 10)
+            insert_content = ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+            return insert_content
+
     # 75% 的概率插入原文中的任意一段随机长度的内容
     if random.random() < 0.75:
         # 随机选择插入内容的起始位置和长度
@@ -180,6 +200,10 @@ def havoc_random_replace(s: str, print_mutator=False):
     基于 AFL 变异算法策略中的 random havoc 实现随机替换
     随机选取一个位置，替换随后一段随机长度的内容，其中 75% 的概率是替换为原文中的任意一段随机长度的内容，25% 的概率是替换为一段随机长度的 bytes
     """
+
+    if len(s) == 0:
+        return s
+
     replace_len = random.randint(1, len(s))
     index = random.randint(0, len(s) - replace_len)
 
@@ -223,17 +247,22 @@ class Mutator:
 
 # for test
 def test_base_mutator():
-    for i in range(10000):
-        print("\n====================================================")
-        origin = "abcdefgh."
-        print("* Origin:                    ", origin)
-        print("* Insert Random Character:   ", insert_random_character(origin, True))
-        print("* Flip Random Bits:          ", flip_random_bits(origin, True))
-        print("* Arithmetic Random Bytes:   ", arithmetic_random_bytes(origin, True))
-        print("* Interesting Random Bytes:  ", interesting_random_bytes(origin, True))
-        print("* Havoc Random Insert:       ", havoc_random_insert(origin, True))
-        print("* Havoc Random Replace:      ", havoc_random_replace(origin, True))
-        print("====================================================")
+    origin = "abcdefgh..."
+    # 可增加测试次数以验证健壮性
+    test_num = 100
+
+    for i in range(len(origin)):
+        origin_slice = origin[0:i]
+        for j in range(test_num):
+            print("\n====================================================")
+            print("* Origin:                    ", origin_slice)
+            print("* Insert Random Character:   ", insert_random_character(origin_slice, True))
+            print("* Flip Random Bits:          ", flip_random_bits(origin_slice, True))
+            print("* Arithmetic Random Bytes:   ", arithmetic_random_bytes(origin_slice, True))
+            print("* Interesting Random Bytes:  ", interesting_random_bytes(origin_slice, True))
+            print("* Havoc Random Insert:       ", havoc_random_insert(origin_slice, True))
+            print("* Havoc Random Replace:      ", havoc_random_replace(origin_slice, True))
+            print("====================================================")
 
 
 if __name__ == '__main__':
