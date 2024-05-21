@@ -1,9 +1,9 @@
 import os
 import time
 
-from fuzzer.PathGreyBoxFuzzer import PathGreyBoxFuzzer
+from fuzzer.PathGreyBoxFuzzer import PathGreyBoxFuzzer, GreyBoxFuzzer
 from runner.FunctionCoverageRunner import FunctionCoverageRunner
-from schedule.PathPowerSchedule import PathPowerSchedule
+from schedule.PathPowerSchedule import PathPowerSchedule, PowerSchedule
 from samples.Samples import sample1, sample2, sample3, sample4
 from utils.ObjectUtils import dump_object, load_object
 
@@ -23,6 +23,7 @@ if __name__ == "__main__":
     f_runner = FunctionCoverageRunner(sample1)
     seeds = load_object("corpus/corpus_1")
 
+    # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=PowerSchedule(), is_print=True)
     grey_fuzzer = PathGreyBoxFuzzer(seeds=seeds, schedule=PathPowerSchedule(5), is_print=True)
     start_time = time.time()
     grey_fuzzer.runs(f_runner, run_time=300)
