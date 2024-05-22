@@ -226,6 +226,30 @@ def havoc_random_replace(s: str, print_mutator=False):
 
     return result
 
+def block_swap(input_str):
+    """
+    基于AFL的块交换方法，每次随机交换str的两块内容，交换次数随机产生
+    """
+    num_swaps = random.randint(1, 5);
+    input_list = list(input_str)
+
+    for _ in range(num_swaps):
+        block_size = random.randint(1, len(input_list) // 2)
+
+        # 将原字符串分为两部分，从两部分中随机产生一个block起始的index
+        start_idx1 = random.randint(0, len(input_list) // 2 - block_size)
+        start_idx2 = random.randint(len(input_list) // 2, len(input_list) - block_size)
+
+        # 提取两个块
+        block1 = input_list[start_idx1:start_idx1 + block_size]
+        block2 = input_list[start_idx2:start_idx2 + block_size]
+
+        # 交换两个块
+        input_list[start_idx1:start_idx1 + block_size] = block2
+        input_list[start_idx2:start_idx2 + block_size] = block1
+
+    mutated_input = ''.join(input_list)
+    return mutated_input
 
 class Mutator:
 
@@ -237,7 +261,8 @@ class Mutator:
             arithmetic_random_bytes,
             interesting_random_bytes,
             havoc_random_insert,
-            havoc_random_replace
+            havoc_random_replace,
+            block_swap
         ]
 
     def mutate(self, inp: Any) -> Any:
