@@ -232,6 +232,8 @@ def block_swap(input_str):
     """
     num_swaps = random.randint(1, 5);
     input_list = list(input_str)
+    if len(input_list) == 1:
+        return input_str
 
     for _ in range(num_swaps):
         block_size = random.randint(1, len(input_list) // 2)
