@@ -253,6 +253,14 @@ def block_swap(input_str):
     mutated_input = ''.join(input_list)
     return mutated_input
 
+def shuffle(input_str):
+    """随机打乱输入字符串的顺序"""
+    if len(input_str) <= 1:
+        return input_str
+    input_list = list(input_str)  # 将字符串转换为字符列表
+    random.shuffle(input_list)  # 随机打乱字符列表的顺序
+    return ''.join(input_list)  # 将字符列表重新组合成字符串
+
 class Mutator:
 
     def __init__(self) -> None:
@@ -264,7 +272,8 @@ class Mutator:
             interesting_random_bytes,
             havoc_random_insert,
             havoc_random_replace,
-            block_swap
+            block_swap,
+            shuffle
         ]
 
     def mutate(self, inp: Any) -> Any:
