@@ -22,10 +22,12 @@ class Result:
 if __name__ == "__main__":
     f_runner = FunctionCoverageRunner(sample4)
     seeds = load_object("corpus/corpus_4")
+
     # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=PowerSchedule(), is_print=True)
     grey_fuzzer = PathGreyBoxFuzzer(seeds=seeds, schedule=PathPowerSchedule(5), is_print=True)
     start_time = time.time()
     grey_fuzzer.runs(f_runner, run_time=300)
+    grey_fuzzer.save_seed_input()
     res = Result(grey_fuzzer.covered_line, set(grey_fuzzer.crash_map.values()), start_time, time.time())
     dump_object("_result" + os.sep + "Sample-1.pkl", res)
     print(load_object("_result" + os.sep + "Sample-1.pkl"))
