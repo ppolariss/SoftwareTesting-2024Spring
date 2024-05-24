@@ -22,7 +22,6 @@ class Result:
 if __name__ == "__main__":
     f_runner = FunctionCoverageRunner(sample1)
     seeds = load_object("corpus/corpus_1")
-
     # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=PowerSchedule(), is_print=True)
     grey_fuzzer = PathGreyBoxFuzzer(seeds=seeds, schedule=PathPowerSchedule(5), is_print=True)
     start_time = time.time()
