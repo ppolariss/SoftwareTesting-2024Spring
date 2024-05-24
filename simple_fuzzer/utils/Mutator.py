@@ -226,13 +226,14 @@ def havoc_random_replace(s: str, print_mutator=False):
 
     return result
 
+
 def block_swap(input_str):
     """
     基于AFL的块交换方法，每次随机交换str的两块内容，交换次数随机产生
     """
     num_swaps = random.randint(1, 5);
     input_list = list(input_str)
-    if len(input_list) == 1:
+    if len(input_list) <= 1:
         return input_str
 
     for _ in range(num_swaps):
@@ -253,6 +254,7 @@ def block_swap(input_str):
     mutated_input = ''.join(input_list)
     return mutated_input
 
+
 def shuffle(input_str):
     """随机打乱输入字符串的顺序"""
     if len(input_str) <= 1:
@@ -260,6 +262,41 @@ def shuffle(input_str):
     input_list = list(input_str)  # 将字符串转换为字符列表
     random.shuffle(input_list)  # 随机打乱字符列表的顺序
     return ''.join(input_list)  # 将字符列表重新组合成字符串
+
+
+def insert_special_characters(s):
+    """插入一些特殊字符或HTML转义字符"""
+    special_chars = ['&lt;', '&gt;', '&amp;', '&quot;', '&apos;']
+    insert_pos = random.randint(0, len(s))
+    special_char = random.choice(special_chars)
+    return s[:insert_pos] + special_char + s[insert_pos:]
+
+
+def insert_nonesense(s):
+    """插入一些可能无意义但可能出发错误的"""
+    """插入不以'<!'或'</'开头的字符串以触发断言失败"""
+    non_assert_strings = ['<a', '<b', '<c','@', '#', '$', '%', '^', '&', '*','&#','（','\123','nct127','HENG']
+    insert_pos = random.randint(0, len(s))
+    assert_string = random.choice(non_assert_strings)
+    return s[:insert_pos] + assert_string + s[insert_pos:]
+
+
+def insert_unclosed_tag(s):
+    """添加一些未闭合的HTML标签"""
+    tags = ['<div', '<span', '<p', '<a href="','</','<!--','<!', '<?','<![','）','@']
+    insert_pos = random.randint(0, len(s))
+    unclosed_tag = random.choice(tags)
+    return s[:insert_pos] + unclosed_tag + s[insert_pos:]
+
+
+def insert_confused_tag(s):
+    """插入一些不完整或混淆的HTML标签"""
+    confused_tags = ['<div/>', '<span>', '<p></', '</p><', '<a href="example.com"></a><','<div attr="value', '<span attr=\'value', '<p attr=value', '<a attr="value']
+    insert_pos = random.randint(0, len(s))
+
+    confused_tag = random.choice(confused_tags)
+    return s[:insert_pos] + confused_tag + s[insert_pos:]
+
 
 class Mutator:
 
@@ -273,7 +310,11 @@ class Mutator:
             havoc_random_insert,
             havoc_random_replace,
             block_swap,
-            shuffle
+            shuffle,
+            insert_special_characters,
+            insert_unclosed_tag,
+            insert_confused_tag,
+            insert_nonesense
         ]
 
     def mutate(self, inp: Any) -> Any:
