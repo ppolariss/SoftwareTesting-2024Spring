@@ -10,6 +10,7 @@ from utils.Coverage import Location
 from utils.Mutator import Mutator
 from runner.FunctionCoverageRunner import FunctionCoverageRunner
 from schedule.PowerSchedule import PowerSchedule
+from utils.ObjectUtils import dump_object, load_object
 
 from utils.Seed import Seed
 
@@ -32,6 +33,7 @@ class GreyBoxFuzzer(Fuzzer):
         self.seeds = seeds
         self.mutator = Mutator()
         self.schedule = schedule
+        self.inps = []
         if is_print:
             print("""
 ┌───────────────────────┬───────────────────────┬───────────────────┬────────────────┬───────────────────┐
@@ -51,6 +53,7 @@ class GreyBoxFuzzer(Fuzzer):
         return candidate
 
     def fuzz(self) -> str:
+        # 在这里保存输入
         """Returns first each seed once and then generates new inputs"""
         if self.seed_index < len(self.seeds):
             # Still seeding
@@ -59,7 +62,7 @@ class GreyBoxFuzzer(Fuzzer):
         else:
             # Mutating
             self.inp = self.create_candidate()
-
+        self.inps.append(self.inp)  # 保存输入到列表中
         return self.inp
 
     def print_stats(self):
@@ -96,3 +99,7 @@ class GreyBoxFuzzer(Fuzzer):
             self.crash_map[self.inp] = result
 
         return result, outcome
+    def save_seed_input(self):
+#         print(self.inps)
+        dump_object("corpus/seeds",self.inps)
+

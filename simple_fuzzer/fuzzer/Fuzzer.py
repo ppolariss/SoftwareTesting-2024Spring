@@ -40,3 +40,4 @@ class Fuzzer:
         while time.time() - self.start_time < run_time:
             res.append(self.run(runner))
         return res
+

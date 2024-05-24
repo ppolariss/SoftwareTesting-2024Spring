@@ -34,7 +34,7 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
         # TODO
         if is_print:
             print(
-                """   
+                """
 ┌───────────────────────┬───────────────────────┬───────────────────────┬───────────────────┬───────────────────┬────────────────┬───────────────────┐
 │        Run Time       │     Last New Path     │    Last Uniq Crash    │    Total Execs    │    Total Paths    │  Uniq Crashes  │   Covered Lines   │
 ├───────────────────────┼───────────────────────┼───────────────────────┼───────────────────┼───────────────────┼────────────────┼───────────────────┤"""
@@ -87,12 +87,14 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
                 # We have new coverage
                 seed = Seed(self.inp, runner.coverage())
                 self.population.append(seed)
+                print(self.population)
                 # self.schedule.update_path_frequencies(seed)
                 self.last_path_time = time.time()
                 self.total_path += 1
         if outcome == Runner.FAIL:
             self.crash_map[self.inp] = result
             self.last_crash_time = time.time()
+
 
         self.schedule.assign_energy(self.population)
 
