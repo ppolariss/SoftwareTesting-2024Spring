@@ -283,7 +283,7 @@ def insert_nonesense(s):
 
 def insert_unclosed_tag(s):
     """添加一些未闭合的HTML标签"""
-    tags = ['<div', '<span', '<p', '<a href="','</','<!--','<!', '<?','<![','）','@']
+    tags = ['<div', '<span', '<p', '<a href="','</','<!--','<!', '<?','<![']
     insert_pos = random.randint(0, len(s))
     unclosed_tag = random.choice(tags)
     return s[:insert_pos] + unclosed_tag + s[insert_pos:]
@@ -296,6 +296,14 @@ def insert_confused_tag(s):
 
     confused_tag = random.choice(confused_tags)
     return s[:insert_pos] + confused_tag + s[insert_pos:]
+
+
+def delete_random_character(s: str) -> str:
+    if s == "":
+        return s
+    index1 = random.randint(0, len(s))
+    index2 = random.randint(0, len(s))
+    return s[:min(index1, index2)] + s[max(index1, index2):]
 
 
 class Mutator:
@@ -314,7 +322,8 @@ class Mutator:
             insert_special_characters,
             insert_unclosed_tag,
             insert_confused_tag,
-            insert_nonesense
+            insert_nonesense,
+            delete_random_character
         ]
 
     def mutate(self, inp: Any) -> Any:
