@@ -5,7 +5,9 @@ from typing import Tuple, Callable, Set, Any, List
 from runner.Runner import Runner
 from utils.Coverage import Coverage, Location
 
-
+# coverage Set[Location]
+# all_coverage Set[Location]
+# cumulative_coverage List[int]
 class FunctionCoverageRunner(Runner):
     def __init__(self, function: Callable) -> None:
         """Initialize.  `function` is a function to be executed"""

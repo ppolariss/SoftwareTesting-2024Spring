@@ -15,21 +15,9 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
 
     def __init__(self, seeds: List[str], schedule: PathPowerSchedule, is_print: bool):
         super().__init__(seeds, schedule, False)
-        self.start_time = time.time()
-        self.last_crash_time = self.start_time
-        self.population = []
-        # self.file_map = {}
-        self.covered_line: Set[Location] = set()
-        self.seed_index = 0
-        self.crash_map = dict()
-        self.seeds = seeds
-        self.mutator = Mutator()
-        self.schedule = schedule
         self.is_print = is_print
-        self.total_execs = 0
         self.total_path = 0
         self.last_path_time = self.start_time
-        self.schedule.path_frequencies = {}
 
         # TODO
         if is_print:
@@ -73,30 +61,14 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
         result, outcome = super().run(runner)
 
         path_id = get_path_id(runner.coverage())
-        if path_id not in self.schedule.path_frequencies:
-            self.schedule.path_frequencies[path_id] = 1
+        if self.schedule.update_path_frequencies(path_id):
+            self.total_path += 1
             self.last_path_time = time.time()
-        else:
-            self.schedule.path_frequencies[path_id] += 1
+        assert self.total_path == len(self.schedule.path_frequencies)
+        # assert self.total_path == runner.cumulative_coverage[-1]
+        # print(len(self.schedule.path_frequencies))
         # TODO
-        self.total_execs += 1
-
-        if len(self.covered_line) != len(runner.all_coverage):
-            self.covered_line |= runner.all_coverage
-            if outcome == Runner.PASS:
-                # We have new coverage
-                seed = Seed(self.inp, runner.coverage())
-                self.population.append(seed)
-                print(self.population)
-                # self.schedule.update_path_frequencies(seed)
-                self.last_path_time = time.time()
-                self.total_path += 1
-        if outcome == Runner.FAIL:
-            self.crash_map[self.inp] = result
-            self.last_crash_time = time.time()
-
-
-        self.schedule.assign_energy(self.population)
+        # self.schedule.assign_energy(self.population)
 
         #     self.print_stats()
 
