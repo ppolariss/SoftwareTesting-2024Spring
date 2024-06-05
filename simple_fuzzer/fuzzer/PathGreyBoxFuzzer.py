@@ -18,6 +18,7 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
         self.is_print = is_print
         self.total_path = 0
         self.last_path_time = self.start_time
+        self.total_crash = 0
 
         # TODO
         if is_print:
@@ -55,6 +56,8 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
             covered_line=str(len(self.covered_line)).center(19),
         )
         print(template)
+        print(self.total_crash)
+        # print(len({k: v for k, v in self.schedule.path_frequencies.items() if v > 2}))
 
     def run(self, runner: FunctionCoverageRunner) -> Tuple[Any, str]:  # type: ignore
         """Inform scheduler about path frequency"""
@@ -64,6 +67,11 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
         if self.schedule.update_path_frequencies(path_id):
             self.total_path += 1
             self.last_path_time = time.time()
+            if outcome == Runner.FAIL:
+                self.total_crash += 1
+                # if self.total_crash % 5 == 0:
+                #     seed = Seed(self.inp, runner.coverage())
+                #     self.population.append(seed)
         assert self.total_path == len(self.schedule.path_frequencies)
         # assert self.total_path == runner.cumulative_coverage[-1]
         # print(len(self.schedule.path_frequencies))

@@ -90,10 +90,10 @@ class GreyBoxFuzzer(Fuzzer):
         result, outcome = super().run(runner)
         if len(self.covered_line) != len(runner.all_coverage):
             self.covered_line |= runner.all_coverage
-            if outcome == Runner.PASS:
+            # if outcome == Runner.PASS:
                 # We have new coverage
-                seed = Seed(self.inp, runner.coverage())
-                self.population.append(seed)
+            seed = Seed(self.inp, runner.coverage())
+            self.population.append(seed)
         if outcome == Runner.FAIL:
             uniq_crash_num = len(set(self.crash_map.values()))
             self.crash_map[self.inp] = result

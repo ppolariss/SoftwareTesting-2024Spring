@@ -1,9 +1,9 @@
 import random
 from typing import List
-
+import heapq
 from utils.Seed import Seed
 
-MAX_SEEDS = 1000
+MAX_SEEDS = 100
 
 
 class PowerSchedule:
@@ -25,9 +25,19 @@ class PowerSchedule:
         """Choose weighted by normalized energy."""
         self.assign_energy(population)
         norm_energy = self.normalized_energy(population)
-        if len(population) > MAX_SEEDS:
+        while len(population) > MAX_SEEDS:
             min_index = norm_energy.index(min(norm_energy))
             del norm_energy[min_index]
             del population[min_index]
+            # print("delete")
+        # if len(population) > MAX_SEEDS:
+        #     min_heap = list(zip(norm_energy, range(len(norm_energy))))
+        #     heapq.heapify(min_heap)
+        #     indices_to_remove = {heapq.heappop(min_heap)[1] for _ in range(len(population) - MAX_SEEDS)}
+        #     list_indices_to_remove = list(indices_to_remove)
+        #     list_indices_to_remove.sort(reverse=True)
+        #     for index in list_indices_to_remove:
+        #         del population[index]
+        #         del norm_energy[index]
         seed: Seed = random.choices(population, weights=norm_energy)[0]
         return seed
