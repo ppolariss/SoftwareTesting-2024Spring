@@ -1,9 +1,19 @@
 import os
 import time
 
-from fuzzer.PathGreyBoxFuzzer import PathGreyBoxFuzzer, GreyBoxFuzzer
+from fuzzer.GreyBoxFuzzer import GreyBoxFuzzer
+from fuzzer.PathGreyBoxFuzzer import PathGreyBoxFuzzer
+from fuzzer.CrashGreyBoxFuzzer import CrashGreyBoxFuzzer
+
 from runner.FunctionCoverageRunner import FunctionCoverageRunner
-from schedule.PathPowerSchedule import PathPowerSchedule, PowerSchedule
+
+from schedule.PowerSchedule import PowerSchedule
+from schedule.PathPowerSchedule import PathPowerSchedule
+from schedule.LevelPowerSchedule import LevelPowerSchedule
+from schedule.CrashPowerSchedule import CrashPowerSchedule
+from schedule.CoveragePowerSchedule import CoveragePowerSchedule
+from schedule.AgePowerSchedule import AgePowerSchedule
+
 from samples.Samples import sample1, sample2, sample3, sample4
 from utils.ObjectUtils import dump_object, load_object
 
@@ -24,9 +34,13 @@ if __name__ == "__main__":
     seeds = load_object("corpus/corpus_4")
 
     # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=PowerSchedule(), is_print=True)
-    grey_fuzzer = PathGreyBoxFuzzer(seeds=seeds, schedule=PathPowerSchedule(13), is_print=True)
+    grey_fuzzer = PathGreyBoxFuzzer(seeds=seeds, schedule=PathPowerSchedule(5), is_print=True)
+    # grey_fuzzer = CrashGreyBoxFuzzer(seeds=seeds, schedule=CrashPowerSchedule(), is_print=True)
+    # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=CoveragePowerSchedule(), is_print=True)
+    # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=AgePowerSchedule(), is_print=True)
+    
     start_time = time.time()
-    grey_fuzzer.runs(f_runner, run_time=10)
+    grey_fuzzer.runs(f_runner, run_time=7200)
     grey_fuzzer.save_seed_input()
     res = Result(grey_fuzzer.covered_line, set(grey_fuzzer.crash_map.values()), start_time, time.time())
     with open('result.txt', 'w') as f:

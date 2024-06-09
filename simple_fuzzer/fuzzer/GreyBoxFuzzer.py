@@ -87,10 +87,11 @@ class GreyBoxFuzzer(Fuzzer):
            If we reach new coverage,
            add inp to population and its coverage to population_coverage
         """
+        # print(f"len(self.population) = {len(self.population)}")
         result, outcome = super().run(runner)
         if len(self.covered_line) != len(runner.all_coverage):
             self.covered_line |= runner.all_coverage
-            # if outcome == Runner.PASS:
+            # if outcome == Runner.PASS:  # NOTE
                 # We have new coverage
             seed = Seed(self.inp, runner.coverage())
             self.population.append(seed)
@@ -101,6 +102,7 @@ class GreyBoxFuzzer(Fuzzer):
                 self.last_crash_time = time.time()
 
         return result, outcome
+    
     def save_seed_input(self):
 #         print(self.inps)
         dump_object("corpus/seeds",self.inps)
