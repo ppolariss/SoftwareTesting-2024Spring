@@ -1,5 +1,6 @@
 import os
 import time
+import json
 
 from fuzzer.GreyBoxFuzzer import GreyBoxFuzzer
 from fuzzer.PathGreyBoxFuzzer import PathGreyBoxFuzzer
@@ -30,23 +31,32 @@ class Result:
 
 
 if __name__ == "__main__":
-    f_runner = FunctionCoverageRunner(sample4)
-    seeds = load_object("corpus/corpus_4")
+    f_runner = FunctionCoverageRunner(sample2)
+    seeds = load_object("corpus/corpus_2")
+    from_disk = False  # 设置是否从磁盘读取种子
 
-    # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=PowerSchedule(), is_print=True)
-    grey_fuzzer = PathGreyBoxFuzzer(seeds=seeds, schedule=PathPowerSchedule(5), is_print=True)
-    # grey_fuzzer = CrashGreyBoxFuzzer(seeds=seeds, schedule=CrashPowerSchedule(), is_print=True)
-    # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=CoveragePowerSchedule(), is_print=True)
-    # grey_fuzzer = GreyBoxFuzzer(seeds=seeds, schedule=AgePowerSchedule(), is_print=True)
+    initial_seed = []
+    if from_disk:
+        # 从磁盘读取第一个种子
+        if os.path.exists("seed_inputs"):
+            initial_seed.append(None)  # 占位，实际使用时从磁盘读取
+    else:
+        # 从已加载的种子列表中获取种子
+        initial_seed = seeds
+
+    # grey_fuzzer = GreyBoxFuzzer(seeds=initial_seed, schedule=PowerSchedule(), is_print=True, from_disk=from_disk)
+    grey_fuzzer = PathGreyBoxFuzzer(seeds=initial_seed, schedule=PathPowerSchedule(5), is_print=True, from_disk=from_disk)
+    # grey_fuzzer = CrashGreyBoxFuzzer(seeds=initial_seed, schedule=CrashPowerSchedule(), is_print=True, from_disk=from_disk)
+    # grey_fuzzer = GreyBoxFuzzer(seeds=initial_seed, schedule=CoveragePowerSchedule(), is_print=True, from_disk=from_disk)
+    # grey_fuzzer = GreyBoxFuzzer(seeds=initial_seed, schedule=AgePowerSchedule(), is_print=True, from_disk=from_disk)
     
     start_time = time.time()
-    grey_fuzzer.runs(f_runner, run_time=7200)
-    grey_fuzzer.save_seed_input()
+    grey_fuzzer.runs(f_runner, run_time=100)
+    # grey_fuzzer.save_seed_input()
     res = Result(grey_fuzzer.covered_line, set(grey_fuzzer.crash_map.values()), start_time, time.time())
-    with open('result.txt', 'w') as f:
-        # 将数据转换成字符串，并逐行写入文件
-        for item in set(grey_fuzzer.crash_map.values()):
-            f.write(str(item) + '\n')
-            f.write("------------------------------------------------")
-    #dump_object("_result" + os.sep + "Sample-1.pkl", res)
-    #print(load_object("_result" + os.sep + "Sample-1.pkl"))
+    # with open('result.txt', 'w') as f:
+    #     for item in set(grey_fuzzer.crash_map.values()):
+    #         f.write(str(item) + '\n')
+    #         f.write("------------------------------------------------")
+    dump_object("_result" + os.sep + "Sample-2.pkl", res)
+    print(load_object("_result" + os.sep + "Sample-2.pkl"))

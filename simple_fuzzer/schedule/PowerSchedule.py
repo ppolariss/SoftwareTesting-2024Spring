@@ -3,7 +3,7 @@ from typing import List
 import heapq
 from utils.Seed import Seed
 
-MAX_SEEDS = 100
+MAX_SEEDS = 1000
 
 
 class PowerSchedule:
@@ -40,4 +40,5 @@ class PowerSchedule:
         #         del population[index]
         #         del norm_energy[index]
         seed: Seed = random.choices(population, weights=norm_energy)[0]
+        # print(seed.energy)
         return seed

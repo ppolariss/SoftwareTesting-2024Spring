@@ -13,12 +13,13 @@ from utils.Seed import Seed
 class PathGreyBoxFuzzer(GreyBoxFuzzer):
     """Count how often individual paths are exercised."""
 
-    def __init__(self, seeds: List[str], schedule: PathPowerSchedule, is_print: bool):
+    def __init__(self, seeds: List[str], schedule: PathPowerSchedule, is_print: bool,from_disk: bool = False):
         super().__init__(seeds, schedule, False)
         self.is_print = is_print
         self.total_path = 0
         self.last_path_time = self.start_time
         self.total_crash = 0
+        self.from_disk = from_disk
 
         # TODO
         if is_print:
@@ -56,7 +57,7 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
             covered_line=str(len(self.covered_line)).center(19),
         )
         print(template)
-        print(self.total_crash)
+        # print(self.total_crash)
         # print(len({k: v for k, v in self.schedule.path_frequencies.items() if v > 2}))
 
     def run(self, runner: FunctionCoverageRunner) -> Tuple[Any, str]:  # type: ignore
