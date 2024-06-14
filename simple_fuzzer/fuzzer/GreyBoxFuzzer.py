@@ -15,7 +15,7 @@ from utils.Seed import Seed
 SEED_DIR = "seed_inputs"
 
 class GreyBoxFuzzer(Fuzzer):
-    def __init__(self, seeds: List[str], schedule: PowerSchedule, is_print: bool, from_disk: bool = False) -> None:
+    def __init__(self, seeds: List[str], schedule: PowerSchedule, is_print: bool, from_disk: bool) -> None:
         """Constructor.
         `seeds` - a list of (input) strings to mutate.
         `mutator` - the mutator to apply.
@@ -33,7 +33,9 @@ class GreyBoxFuzzer(Fuzzer):
         self.schedule = schedule
 
         self.from_disk = from_disk
-        self.clear_seed_dir()
+        if not self.from_disk:
+            print("我已经清理")
+            self.clear_seed_dir()  
 
         if is_print:
             print("""
@@ -108,6 +110,8 @@ class GreyBoxFuzzer(Fuzzer):
                 self.population.append(seed)
                 self.save_seed(seed)
         if outcome == Runner.FAIL:
+            seed = Seed(self.inp, runner.coverage())
+            self.save_seed(seed)
             uniq_crash_num = len(set(self.crash_map.values()))
             self.crash_map[self.inp] = result
             if len(set(self.crash_map.values())) != uniq_crash_num:

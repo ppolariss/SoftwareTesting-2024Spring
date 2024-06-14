@@ -31,9 +31,9 @@ class Result:
 
 
 if __name__ == "__main__":
-    f_runner = FunctionCoverageRunner(sample2)
-    seeds = load_object("corpus/corpus_2")
-    from_disk = False  # 设置是否从磁盘读取种子
+    f_runner = FunctionCoverageRunner(sample3)
+    seeds = load_object("corpus/corpus_3")
+    from_disk = False # 设置是否从磁盘读取种子
 
     initial_seed = []
     if from_disk:
@@ -51,12 +51,12 @@ if __name__ == "__main__":
     # grey_fuzzer = GreyBoxFuzzer(seeds=initial_seed, schedule=AgePowerSchedule(), is_print=True, from_disk=from_disk)
     
     start_time = time.time()
-    grey_fuzzer.runs(f_runner, run_time=100)
+    grey_fuzzer.runs(f_runner, run_time=10)
     # grey_fuzzer.save_seed_input()
     res = Result(grey_fuzzer.covered_line, set(grey_fuzzer.crash_map.values()), start_time, time.time())
     # with open('result.txt', 'w') as f:
     #     for item in set(grey_fuzzer.crash_map.values()):
     #         f.write(str(item) + '\n')
     #         f.write("------------------------------------------------")
-    dump_object("_result" + os.sep + "Sample-2.pkl", res)
-    print(load_object("_result" + os.sep + "Sample-2.pkl"))
+    dump_object("_result" + os.sep + "Sample-3.pkl", res)
+    print(load_object("_result" + os.sep + "Sample-3.pkl"))

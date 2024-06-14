@@ -13,8 +13,8 @@ from utils.Seed import Seed
 class PathGreyBoxFuzzer(GreyBoxFuzzer):
     """Count how often individual paths are exercised."""
 
-    def __init__(self, seeds: List[str], schedule: PathPowerSchedule, is_print: bool,from_disk: bool = False):
-        super().__init__(seeds, schedule, False)
+    def __init__(self, seeds: List[str], schedule: PathPowerSchedule, is_print: bool,from_disk: bool):
+        super().__init__(seeds, schedule, False,from_disk)
         self.is_print = is_print
         self.total_path = 0
         self.last_path_time = self.start_time
