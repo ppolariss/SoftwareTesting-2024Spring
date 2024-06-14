@@ -34,7 +34,6 @@ class GreyBoxFuzzer(Fuzzer):
 
         self.from_disk = from_disk
         if not self.from_disk:
-            print("我已经清理")
             self.clear_seed_dir()  
 
         if is_print:
